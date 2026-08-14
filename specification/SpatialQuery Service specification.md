@@ -21,7 +21,7 @@ These datasets can be analyzed by the SpatialQuery package to
 [SpatialQuery](https://github.com/ShaokunAn/Spatial-Query/blob/2d0f76e5390b81467758932efb1b6103fa220be1/README.md) is a class-based package that is initialized by loading the AnnData file (.h5ad) for a specified HuBMAP dataset. SpatialQuery offers parameterized analysis functions that return Pandas DataFrames of information related to the dataset.
 
 # Use case
-The prototype use case for SpatialQuery in the HuBMAP Data Portal is the Vitessce visualization of the Single Field Of View (FOV) analysis of a spatially resolved transcriptomics dataset. 
+The prototype use case for SpatialQuery service in the HuBMAP Data Portal is the Vitessce visualization of the Single Field Of View (FOV) analysis of a spatially resolved transcriptomics dataset. 
 
 ## Inputs
 + The end user selects a spatially resolved dataset from the Data Portal.
@@ -42,10 +42,12 @@ To launch the workspace,
 
 The notebook is the basis for [Tutorial 1](https://spatialquery.readthedocs.io/en/latest/tutorials/tutorial_1.html) in the SpatialQuery documentation site.
 
+As of August 2026, the notebook no longer works.
+
 ---
-# Service integration
+# SpatialQuery Service integration
 The SpatialQuery service will support integration with 
-* appropriate environment's (HuBMAP or SenNet) API endpoints (i.e., in entity-api, uuid-api, ingest-api, etc.)
+* the appropriate environment (HuBMAP or SenNet) API endpoints (i.e., in entity-api, uuid-api, ingest-api, etc.)
 * SpatialQuery API endpoints
 * calls to the SpatialQuery Vitessce Widget
 
@@ -56,7 +58,22 @@ The SpatialQuery service will be a Flask application that manages calls to the v
 
 # Service requirements
 1. The service will use the environment-appropriate api to obtain the UUID of spatially resolved datasets.
-2. The service will wrap calls to the SpatialQuery API and SpatialQuery Vitessce widget
+2. The service will encapsulate calls to the SpatialQuery API and SpatialQuery Vitessce widget.
+
+# Service endpoints
+## /get_dataset_uuid
+### parameters
+#### hmid
+* in: path
+* format: case-insensitive string corresponding to the HuBMAP ID of a spatially resolved dataset
+* example: HBM847.GZGD.668
+### calls
+* environment entity-api
+### response
+#### uuids
+array of uuids corresponding to the Anndata (HD5) files associated with the dataset.
+
+## /get_spatialquery_single_fov
 
 # Example code: from Jupyter notebook
 
