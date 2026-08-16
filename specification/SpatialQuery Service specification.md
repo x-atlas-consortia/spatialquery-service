@@ -90,7 +90,7 @@ array of uuids corresponding to the Anndata (HD5) files associated with the data
 * format: uuid for the spatially resolved dataset to use for Single FOV analysis
 ### pseudocode
 Based on the non-functioning Jupyter notebook, tasks include:
-1. Load spatial transcriptomics data for the UUID, using relative paths 
+1. Load spatial transcriptomics data for the UUID, using relative paths. 
 ```azure
 adatas = []
 adata_zarr_paths = [] # for vitessce
