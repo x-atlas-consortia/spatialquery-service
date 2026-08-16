@@ -69,73 +69,46 @@ The SpatialQuery service will be a Flask application that manages calls to the v
 * example: HBM847.GZGD.668
 ### calls
 * environment entity-api
+* the hubmap-template-helper library's check_template_compatibility function:
+
+```
+uuids = hth_comp.check_template_compatibility(uuids, search_api=search_api, accepted_assay_display_names=accepted_assay_display_names)
+```
+
 ### response
 #### uuids
 array of uuids corresponding to the Anndata (HD5) files associated with the dataset.
 
 ## /get_spatialquery_single_fov
-
-# Example code: from Jupyter notebook
-
-The following code is taken from the example workspace Jupyter notebook. 
-Python code from the various blocks in the notebook was consolidated into a single block of code. 
-
-The inputs for the code block are:
-A list of dataset UUIDs
-The preferred term for an anchor cell type
-
-The output of the code block is an invocation of Vitessce.
-/spatialquery/uuid/celltype-id
-
+### parameters
+##### cell-type
+* in: path
+* format: string corresponding to the preferred term for the cell type to be used as the anchor for motif enrichment
+* example: podocyte
+##### uuid
+* in: path
+* format: uuid for the spatially resolved dataset to use for Single FOV analysis
+### pseudocode
+Based on the non-functioning Jupyter notebook, tasks include:
+1. Load spatial transcriptomics data for the UUID, using relative paths 
 ```azure
-import requests
-import json
-import os
-import warnings
-
-import numpy as np
-import pandas as pd
-import anndata as ad
-import zarr
-
-from tqdm import tqdm
-
-from hubmap_template_helper import compatibility as hth_comp
-
-from SpatialQuery.spatial_query import spatial_query
-from SpatialQuery.spatial_query_multiple_fov import spatial_query_multi
-
-from vitessce import (
-    VitessceConfig,
-    AnnDataWrapper,
-    ViewType as vt,
-    CoordinationType as ct,
-    CoordinationLevel as CL,
-)
-from vitessce.widget_plugins import SpatialQueryPlugin
-
-warnings.filterwarnings("ignore")
-pd.set_option('display.max_colwidth', 1000)
-pd.set_option('display.max_columns', 500)
-
-
-# linked datasets
-uuids = ['a1d17fdd270a69c813b872a927dfa5f3']
-
 adatas = []
 adata_zarr_paths = [] # for vitessce
 for uuid in tqdm(uuids):
     adatas.append(ad.read_h5ad('datasets/' + uuid + '/secondary_analysis.h5ad'))
     adata_zarr_paths.append('datasets/' + uuid + '/hubmap_ui/anndata-zarr/secondary_analysis.zarr')
+```
 
-search_api = 'https://search.api.hubmapconsortium.org/v3/portal/search'
+2. Initialize SpatialQuery Single FOV analysis
 
-accepted_assay_display_names = ["Slide-seq [Salmon]"]
+The process begins with the initialization of a SpatialQuery object, which involves constructing a KD-tree using spatial location data and storing labels for each spot.
 
-print(len(uuids))
-uuids = hth_comp.check_template_compatibility(uuids, search_api=search_api, accepted_assay_display_names=accepted_assay_display_names)
-print(len(uuids))
+Use an annotated AnnData object loaded from "secondary_analysis.h5ad". The key components for initialization are:
 
+* Cell annotations: Stored in AnnData.obs, accessed using the label_key parameter.
+* Spatial locations: Stored in AnnData.obsm, accessed using the spatial_key parameter.
+* Dataset identifier: An optional dataset parameter can be provided to uniquely name each FOV.
+```azure
 spatial_key = 'X_spatial'
 label_key = 'predicted_label'
 
@@ -148,18 +121,20 @@ single_sp = spatial_query(
     label_key=label_key,
     leaf_size=10
 )
+```
 
-#CL_id = 0000653
-central_ct = 'podocyte'
-fp_knn = single_sp.find_fp_knn(
-    ct=central_ct,
-    k=30,
-    min_support=0.7
-)
-fp_knn
+3. Initialize Vitessce SpatialQuery plugin
+Interactive visualization with Vitessce currently only supports the single-FOV analysis case. 
+Construct a SpatialQueryPlugin for Vitessce, which we pass when calling vc.widget(). 
+This plugin adds the "Spatial Query Manager" view, facilitating interactive modification of 
+query parameters and query execution via a graphical interface.
 
+The values of **adata**, **spatial_key**, and **labe_key** are set in the intialization of SpatialQuery.
+```azure
 plugin = SpatialQueryPlugin(adata, spatial_key=spatial_key, label_key=label_key)
-
+```
+4. Configure Vitessce with our dataset and views of interest. Initialize cell type colors so they are used consistently for both cell type annotations and cell types that appear in SpatialQuery results.
+```azure
 vc = VitessceConfig(schema_version="1.0.16", name="Spatial-Query")
 dataset = vc.add_dataset("Query results").add_object(AnnDataWrapper(
     adata_store=zarr.DirectoryStore(adata_zarr_paths[0]),
@@ -201,8 +176,12 @@ vc.link_views_by_dict([spatial_view, lc_view], {
 })
 
 vc.layout((spatial_view | (lc_view / features_view)) / (sets_view | sq_view));
+```
 
+5. Finally, render the Vitessce widget and pass the SpatialQueryPlugin instance.
+```azure
 vw = vc.widget(height=900, plugins=[plugin], remount_on_uid_change=False)
 vw
-
 ```
+### response
+Vitessce interaction
