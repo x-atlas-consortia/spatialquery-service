@@ -76,21 +76,30 @@ uuids = hth_comp.check_template_compatibility(uuids, search_api=search_api, acce
 ```
 
 ### response
-#### uuids
+#### HTTP 404
+For cases in which there are no datasets associated with the HuBMAP ID that have **is_spatial**=True.
+
+#### HTTP 200
 array of uuids corresponding to the Anndata (HD5) files associated with the dataset.
 
+#### Issue
+Is it necessary to select a particular UUID, or is there only one such UUID per HuBMAP ID?
+
 ## /get_spatialquery_single_fov
+Performs Single Field of View (FOV) analysis of a dataset and provides results of analysis to the Vitessce plugin.
 ### parameters
 ##### cell-type
 * in: path
-* format: string corresponding to the preferred term for the cell type to be used as the anchor for motif enrichment
+* format: URL-encoded string corresponding to the preferred term for the cell type to be used as the anchor for motif enrichment
 * example: podocyte
+* note: string terms with spaces are used--e.g., "gut cell".
 ##### uuid
 * in: path
 * format: uuid for the spatially resolved dataset to use for Single FOV analysis
 ### pseudocode
 Based on the non-functioning Jupyter notebook, tasks include:
-1. Load spatial transcriptomics data for the UUID, using relative paths. 
+##### 1. Load spatial transcriptomics data for the UUID, using relative paths. 
+In general, this loads an array.
 ```azure
 adatas = []
 adata_zarr_paths = [] # for vitessce
@@ -99,7 +108,7 @@ for uuid in tqdm(uuids):
     adata_zarr_paths.append('datasets/' + uuid + '/hubmap_ui/anndata-zarr/secondary_analysis.zarr')
 ```
 
-2. Initialize SpatialQuery Single FOV analysis
+##### 2. Initialize SpatialQuery Single FOV analysis
 
 The process begins with the initialization of a SpatialQuery object, which involves constructing a KD-tree using spatial location data and storing labels for each spot.
 
@@ -123,7 +132,7 @@ single_sp = spatial_query(
 )
 ```
 
-3. Initialize Vitessce SpatialQuery plugin
+##### 3. Initialize Vitessce SpatialQuery plugin
 Interactive visualization with Vitessce currently only supports the single-FOV analysis case. 
 Construct a SpatialQueryPlugin for Vitessce, which we pass when calling vc.widget(). 
 This plugin adds the "Spatial Query Manager" view, facilitating interactive modification of 
@@ -133,7 +142,8 @@ The values of **adata**, **spatial_key**, and **labe_key** are set in the intial
 ```azure
 plugin = SpatialQueryPlugin(adata, spatial_key=spatial_key, label_key=label_key)
 ```
-4. Configure Vitessce with our dataset and views of interest. Initialize cell type colors so they are used consistently for both cell type annotations and cell types that appear in SpatialQuery results.
+##### 4. Configure Vitessce with our dataset and views of interest. 
+Initialize cell type colors so they are used consistently for both cell type annotations and cell types that appear in SpatialQuery results.
 ```azure
 vc = VitessceConfig(schema_version="1.0.16", name="Spatial-Query")
 dataset = vc.add_dataset("Query results").add_object(AnnDataWrapper(
@@ -178,10 +188,14 @@ vc.link_views_by_dict([spatial_view, lc_view], {
 vc.layout((spatial_view | (lc_view / features_view)) / (sets_view | sq_view));
 ```
 
-5. Finally, render the Vitessce widget and pass the SpatialQueryPlugin instance.
+##### 5. Render the Vitessce widget and pass the SpatialQueryPlugin instance.
 ```azure
 vw = vc.widget(height=900, plugins=[plugin], remount_on_uid_change=False)
 vw
 ```
 ### response
-Vitessce interaction
+* 200 -Vitessce interaction
+* Exception handling may include:
+  * Passing along errors from SpatialQuery
+  * 404 errors relating to invalid UUID or cell type
+  * Passing along errors from Vitessce plugin
