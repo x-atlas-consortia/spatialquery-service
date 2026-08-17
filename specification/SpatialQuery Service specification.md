@@ -97,7 +97,7 @@ Performs Single Field of View (FOV) analysis of a dataset and provides results o
 * in: path
 * format: uuid for the spatially resolved dataset to use for Single FOV analysis
 ### pseudocode
-Based on the non-functioning Jupyter notebook, tasks include:
+Tasks include:
 ##### 1. Load spatial transcriptomics data for the UUID, using relative paths. 
 In general, this loads an array.
 ```azure
@@ -199,3 +199,13 @@ vw
   * Passing along errors from SpatialQuery
   * 404 errors relating to invalid UUID or cell type
   * Passing along errors from Vitessce plugin
+
+# Alternative: using interactive_motif
+According to the notebook, 
+
+SpatialQuery provides `interactive_motif`, a one-line function to launch an interactive Vitessce widget for exploring spatial motifs in Jupyter notebooks. The widget includes spatial scatter plots, cell type browsers, and an interactive query panel supporting motif discovery as listed above for real-time motif enrichment analysis.
+
+Note that this would only work in a Jupyter Notebook.
+```azure
+interactive_motif(single_sp, zarr_path='./interactive_motif.zarr')
+```
