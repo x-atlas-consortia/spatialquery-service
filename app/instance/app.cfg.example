@@ -1,0 +1,23 @@
+# Application port
+PORT=5000
+# Application context (consortia)
+CONTEXT_HUBMAP='hubmapconsortium'
+CONTEXT_SENNET='sennetconsortium'
+
+# App key
+KEY='x'
+# Globus keys
+GLOBUS_HUBMAP_CLIENT='GLOBUS_HUBMAP_CLIENT'
+GLOBUS_HUBMAP_SECRET='GLOBUS_HUBMAP_SECRET'
+GLOBUS_SENNET_CLIENT='GLOBUS_SENNET_CLIENT'
+GLOBUS_SENNET_SECRET='GLOBUS_SENNET_SECRET'
+
+# HuBMAP/SenNet base URLs, to be combined with selected CONTEXT_* consortium
+# uuid-api
+UUID_BASE_URL='https://uuid-api.dev'
+# entity-api
+ENTITY_BASE_URL='https://entity-api.dev'
+# Data Portal
+DATA_PORTAL_BASE_URL='https://data'
+# Search API
+SEARCH_BASE_URL='https://search-api.dev'

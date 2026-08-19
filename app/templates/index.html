@@ -1,0 +1,42 @@
+<!--Globus login page-->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid bg-secondary text-white">
+    <br>
+    <img src="/static/spatial-query.png" alt="SpatialQuery" data-height="234" style="max-height: 40px; padding: 10px;">
+    <img src="/static/vitessce.png" alt="Vitessce" data-height="234" style="max-height: 40px; padding: 10px;">
+    <br>
+    <!--<h4>Select Dataset</h4>-->
+</div>
+<h2>Select Consortium and Dataset</h2>
+<form method=post>
+    <div class="container-fluid">
+        <br>
+        <div>
+            <label for="consortium">Consortium</label>
+            <select id="consortium" name="consortium" class="form-control" style="width: 20ch;">
+                <option value="HuBMAP">HuBMAP</option>
+                <option value="SenNet">SenNet</option>
+            </select>
+        </div>
+        <div>
+            <label for="dataset">Dataset ID</label>
+            <input type="text" id="dataset" name="dataset" class="form-control" style="width: 20ch;">
+        </div>
+        <div>
+            &#8679; ID format is <i>(CCCnnn.XXXX.nnn)</i>, with <i>CCC</i> in (HBM,SNT); <i>n</i> integer; <i>X</i> non-numeric
+        </div>
+        <br>
+        <div>
+            <button type="submit"  class="btn btn-primary btn-lg"
+                    value="Search" onclick="spinner_index()">Get Dataset UUIDs</button>
+        </div>
+        <br>
+        <!-- Spinner that displays while logging in -->
+        <div id="spinner" class="loading">
+        </div>
+        <br>
+    </div>
+</form>
+{% endblock %}
