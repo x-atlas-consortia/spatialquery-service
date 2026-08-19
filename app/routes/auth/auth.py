@@ -66,8 +66,10 @@ def login():
     # Obtain consortium.
     if 'state' in request.args:
         consortium = request.args.get('state').split(' ')[0]
+        datasetid = request.args.get('state').split(' ')[1]
     else:
         consortium = session['consortium']
+        datasetid = session['datasetid']
 
     client = load_app_client(consortium)
 
@@ -78,7 +80,7 @@ def login():
     # If there's no "code" argument in the request object, then this is the first execution of the route.
     # Redirect out to Globus Auth, identifying the consortium and donor id via the state key.
     if 'code' not in request.args:
-        state = f'{session["consortium"]}'# {session["datasetid"]}'
+        state = f'{session["consortium"]} {session["datasetid"]}'
         params: dict = {"scope": "openid profile email"
                                  " urn:globus:auth:scope:transfer.api.globus.org:all"
                                  " urn:globus:auth:scope:auth.globus.org:view_identities"
@@ -104,6 +106,7 @@ def login():
         session['groups_token'] = groups_token
         session['consortium'] = consortium
         session['userid'] = user_info.get('preferred_username')
+        session['datasetid'] = datasetid
 
         # Redirect to the appropriate page, based on the workflow.
         return redirect(f'/get-uuids')

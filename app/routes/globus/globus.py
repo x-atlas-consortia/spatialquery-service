@@ -9,25 +9,23 @@ from flask import Blueprint, request, render_template, redirect, session, make_r
 globus_blueprint = Blueprint('globus', __name__, url_prefix='/')
 
 @globus_blueprint.route('/', methods=['GET','POST'])
-def globus_get():
-    return globus(consortium='HUBMAP')
 
-
-def globus(consortium=None):
+def globus():
 
     """
     Index route that attempt to authenticate to a Globus consortium.
-    :param consortium: name of the consortium (either HUBMAP or SENNET)
     """
 
     if request.method == 'POST':
+        consortium = request.form.get('consortium')
+        datasetid = request.form.get('datasetid')
         # Get the consortium from the request.
         if consortium.upper() not in ['HUBMAP', 'SENNET']:
             return make_response(f'Invalid consortium: {consortium}', 400)
         consortium = consortium.upper()
 
         session['consortium'] = f'CONTEXT_{consortium}'
-        session['datasetid'] = request.form.get('datasetid')
+        session['datasetid'] = datasetid
 
         """
         Authenticate to Globus via the login route.
