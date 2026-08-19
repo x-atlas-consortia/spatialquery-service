@@ -16,13 +16,20 @@
         <div>
             <label for="consortium">Consortium</label>
             <select id="consortium" name="consortium" class="form-control" style="width: 20ch;">
-                <option value="HuBMAP">HuBMAP</option>
+                <option value="HuBMAP" selected>HuBMAP</option>
                 <option value="SenNet">SenNet</option>
             </select>
         </div>
         <div>
+           <i>Currently, only HuBMAP is supported.</i>
+        </div>
+        <div>
             <label for="datasetid">Dataset ID</label>
-            <input type="text" id="datasetid" name="datasetid" class="form-control" style="width: 20ch;">
+            <input type="text" id="datasetid" name="datasetid" class="form-control" style="width: 20ch;" value="HBM847.GZGD.668">
+        </div>
+        <div>
+            <label for="celltype">Cell type</label>
+            <input type="text" id="celltype" name="celltype" class="form-control" style="width: 20ch;" value="podocyte">
         </div>
         <div>
             &#8679; ID format is <i>(CCCnnn.XXXX.nnn)</i>, with <i>CCC</i> in (HBM,SNT); <i>n</i> integer; <i>X</i> non-numeric
@@ -30,7 +37,7 @@
         <br>
         <div>
             <button type="submit"  class="btn btn-primary btn-lg"
-                    value="Search" onclick="spinner_index()">Get Dataset UUID</button>
+                    value="Search" onclick="spinner_index()">Get SpatialQuery Vitessce data</button>
         </div>
         <br>
         <!-- Spinner that displays while logging in -->
