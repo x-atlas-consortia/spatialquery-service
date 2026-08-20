@@ -102,6 +102,19 @@ class SpatialQueryVitessce:
                                          feature_name=self.feature_name)
 
         vc = VitessceConfig(schema_version="1.0.16", name="Spatial-Query")
+
+        """
+        Dev note: the original code called the function with 
+        adata_store=zarr.DirectoryStore(adata_zarr_paths[0]).
+        DirectoryStore is no longer an attribute of zarr. 
+        Based on a discussion in the zarr repo, I changed to 
+        zarr.storage.LocalStore, which worked.
+        
+        I'm not sure whether this will work if the files are
+        in Globus instead of on the local machine. It may be necessary
+        to download the files first.
+        """
+
         dataset = vc.add_dataset("Query results").add_object(AnnDataWrapper(
             adata_store=zarr.storage.LocalStore(self.anndata.adata_zarr_paths[0]),
             obs_feature_matrix_path="X",
