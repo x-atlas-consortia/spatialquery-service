@@ -30,20 +30,6 @@ The prototype use case for SpatialQuery service in the HuBMAP Data Portal is the
 ## Outputs
 The Data Portal displays a separate Vitessce visualization of the SpatialQuery FOV results for the selected dataset and cell type.
 
-# Prototype integration/Tutorial
-
-A prototype using the SpatialQuery API is available as a Jupyter Notebook in a HuBMAP Workspace. 
-
-To launch the workspace,
-1. Log in to the HuBMAP Data Portal with a user with Workspace privileges.
-2. Select the dataset with HuBMAP ID HBM847.GZGD.668.
-3. In the far right menu of the dataset view, select Workspace.
-4. Specify the SpatialQuery environment.
-
-The notebook is the basis for [Tutorial 1](https://spatialquery.readthedocs.io/en/latest/tutorials/tutorial_1.html) in the SpatialQuery documentation site.
-
-As of August 2026, the notebook no longer works.
-
 ---
 # SpatialQuery Service integration
 The SpatialQuery service will support integration with 
@@ -60,152 +46,94 @@ The SpatialQuery service will be a Flask application that manages calls to the v
 1. The service will use the environment-appropriate api to obtain the UUID of spatially resolved datasets.
 2. The service will encapsulate calls to the SpatialQuery API and SpatialQuery Vitessce widget.
 
+# PROTOTYPES
+
+## Jupyter notebook
+
+A prototype using the SpatialQuery API is available as a Jupyter Notebook in a HuBMAP Workspace. 
+
+To launch the workspace,
+1. Log in to the HuBMAP Data Portal with a user with Workspace privileges.
+2. Select the dataset with HuBMAP ID HBM847.GZGD.668.
+3. In the far right menu of the dataset view, select Workspace.
+4. Specify the Python kernel (at least 3.10) and the SpatialQuery template.
+
+The notebook is related to [Tutorial 1](https://spatialquery.readthedocs.io/en/latest/tutorials/tutorial_1.html) in the SpatialQuery documentation site.
+
+## Python prototype application
+The _app_ directory of this repository contains a Web application that performs Single FOV analysis on a dataset and 
+provides a JSON of Vitessce widget information.
+
+The application:
+1. Displays a web page with a form that allows the user the specify the consortium, dataset id, and cell type to use as anchor motif.
+2. Authenticates to the appropriate Globus consortium.
+3. Loads H5AD and Zarr files for the dataset from a local store.
+4. Performs Single FOV analysis on the specified dataset.
+5. Returns Vitessce Widget information as a JSON response.
+
+### Setup on a local machine
+1. Create a folder to contain the **app.cfg** and local Anndata and Zarr files. There are three possible locations:
+   * Bare metal: in a subdirectory named **spatial-query** of the user root (e.g., the resolution of "~" in MacOs) 
+   * Docker: in the path _/usr/src/app_  of the volume mount
+   * Environment variable **APP_CONFIG**
+2. Copy the file **app.cfg.example** to a file named **app.cfg** in the folder. 
+3. Edit the **app.cfg** file to provide the appropriate values of keys and secrets.
+4. Access a dataset with spatially-resolved data products (e.g., HBM847.GZGD.668) in Data Portal.
+5. Download the file **secondary_analysis.h5ad** from the Data Portal to the directory on the local machine.
+6. View the JSON of the dataset in Data Portal.
+7. Using the descendant UUIDs, find the location of the secondary_analysis.zarr path in Globus--e.g., _/a1d17fdd270a69c813b872a927dfa5f3/hubmap_ui/anndata-zarr/_.
+8. Download the Zarr directory to the directory on the local machine.
+9. Clone this repo.
+10. Create a Python virtual environment.
+11. Install the packages in **requirements.txt**.
+
+
 # Service endpoints
-## /get_dataset_uuid
-### parameters
-#### hmid
-* in: path
-* format: case-insensitive string corresponding to the HuBMAP ID of a spatially resolved dataset
-* example: HBM847.GZGD.668
-### calls
-* environment entity-api
-* the hubmap-template-helper library's check_template_compatibility function:
 
-```
-uuids = hth_comp.check_template_compatibility(uuids, search_api=search_api, accepted_assay_display_names=accepted_assay_display_names)
-```
+#### Note on parameters
+In the prototype application, all parameters are
+passed to endpoints via session variables.
 
-### response
-#### HTTP 404
-For cases in which there are no datasets associated with the HuBMAP ID that have **is_spatial**=True.
+## /globus, /auth
+These endpoints handle authentication to Globus. 
+The endpoints work in tandem, and in fact redirect to each other in a loop until the user
+is authenticated. Once the user has been authenticated, the /auth endpoint redirects to the /get_spqv route.
 
-#### HTTP 200
-array of uuids corresponding to the Anndata (HD5) files associated with the dataset.
-
-#### Issue
-Is it necessary to select a particular UUID, or is there only one such UUID per HuBMAP ID?
-
-## /get_spatialquery_single_fov
+## /get_spqv
 Performs Single Field of View (FOV) analysis of a dataset and provides results of analysis to the Vitessce plugin.
-### parameters
-##### cell-type
-* in: path
-* format: URL-encoded string corresponding to the preferred term for the cell type to be used as the anchor for motif enrichment
-* example: podocyte
-* note: string terms with spaces are used--e.g., "gut cell".
-##### uuid
-* in: path
-* format: uuid for the spatially resolved dataset to use for Single FOV analysis
-### pseudocode
-Tasks include:
+
+### Workflow
 ##### 1. Load spatial transcriptomics data for the UUID, using relative paths. 
-In general, this loads an array.
-```azure
-adatas = []
-adata_zarr_paths = [] # for vitessce
-for uuid in tqdm(uuids):
-    adatas.append(ad.read_h5ad('datasets/' + uuid + '/secondary_analysis.h5ad'))
-    adata_zarr_paths.append('datasets/' + uuid + '/hubmap_ui/anndata-zarr/secondary_analysis.zarr')
-```
+It is necessary to:
+1. Load the **secondary_analysis.h5ad** file associated with the dataset.
+2. Identify the path to the **secondary_analysis.zarr** associated with the dataset.
+
+The prototype application reads these files locally and manages them in the _Anndata_ class (**anndata.py**).
+
+The production application will need either to point to files in Globus or download them locally.
 
 ##### 2. Initialize SpatialQuery Single FOV analysis
+The prototype application encapsulates integration with SpatialQuery using the _SpatialQueryVitessce_ class (**spatialquery_vitessce.py**).
 
-The process begins with the initialization of a SpatialQuery object, which involves constructing a KD-tree using spatial location data and storing labels for each spot.
+The **init** function of the __SpatialQueryVitessce_ class initializes SpatialQuery.
 
-Use an annotated AnnData object loaded from "secondary_analysis.h5ad". The key components for initialization are:
-
-* Cell annotations: Stored in AnnData.obs, accessed using the label_key parameter.
-* Spatial locations: Stored in AnnData.obsm, accessed using the spatial_key parameter.
-* Dataset identifier: An optional dataset parameter can be provided to uniquely name each FOV.
-```azure
-spatial_key = 'X_spatial'
-label_key = 'predicted_label'
-
-adata = adatas[0]
-
-single_sp = spatial_query(
-    adata=adata,
-    dataset="single-fov",
-    spatial_key=spatial_key,
-    label_key=label_key,
-    leaf_size=10
-)
-```
+The **find_fp_knn** function of the class is an example of how to wrap calls to the SpatialQuery API.
 
 ##### 3. Initialize Vitessce SpatialQuery plugin
-Interactive visualization with Vitessce currently only supports the single-FOV analysis case. 
-Construct a SpatialQueryPlugin for Vitessce, which we pass when calling vc.widget(). 
-This plugin adds the "Spatial Query Manager" view, facilitating interactive modification of 
-query parameters and query execution via a graphical interface.
+The _SpatialQueryVitessce_ class initializes the SpatialQuery Vitessce plugin.
 
-The values of **adata**, **spatial_key**, and **labe_key** are set in the intialization of SpatialQuery.
-```azure
-plugin = SpatialQueryPlugin(adata, spatial_key=spatial_key, label_key=label_key)
-```
-##### 4. Configure Vitessce with our dataset and views of interest. 
-Initialize cell type colors so they are used consistently for both cell type annotations and cell types that appear in SpatialQuery results.
-```azure
-vc = VitessceConfig(schema_version="1.0.16", name="Spatial-Query")
-dataset = vc.add_dataset("Query results").add_object(AnnDataWrapper(
-    adata_store=zarr.DirectoryStore(adata_zarr_paths[0]),
-    obs_feature_matrix_path="X",
-    obs_set_paths=[f"obs/{label_key}"],
-    obs_set_names=["Cell Type"],
-    obs_spots_path=f"obsm/{spatial_key}",
-    feature_labels_path="var/hugo_symbol",
-    coordination_values={
-        "featureLabelsType": "Gene symbol",
-    }
-))
-
-spatial_view = vc.add_view("spatialBeta", dataset=dataset)
-lc_view = vc.add_view("layerControllerBeta", dataset=dataset)
-sets_view = vc.add_view("obsSets", dataset=dataset)
-features_view = vc.add_view("featureList", dataset=dataset)
-sq_view = vc.add_view("spatialQuery", dataset=dataset)
-
-obs_set_selection_scope, = vc.add_coordination("obsSetSelection",)
-obs_set_selection_scope.set_value(None)
-
-sets_view.use_coordination(obs_set_selection_scope)
-sq_view.use_coordination(obs_set_selection_scope)
-spatial_view.use_coordination(obs_set_selection_scope)
-features_view.use_coordination(obs_set_selection_scope)
-
-vc.link_views([spatial_view, lc_view, sets_view, features_view],
-    ["additionalObsSets", "obsSetColor"],
-    [plugin.additional_obs_sets, plugin.obs_set_color]
-)
-vc.link_views_by_dict([spatial_view, lc_view], {
-    "spotLayer": CL([
-        {
-            "obsType": "cell",
-            "spatialSpotRadius": 15,
-        },
-    ])
-})
-
-vc.layout((spatial_view | (lc_view / features_view)) / (sets_view | sq_view));
-```
+##### 4. Configure Vitessce with dataset and views of interest. 
+The **get_vitessce_widget** function of the _SpatialQueryVitessce_ class works with data from the _Anndata_ class 
+to populate a Vitessce Widget with information from the SpatialQuery plugin.
 
 ##### 5. Render the Vitessce widget and pass the SpatialQueryPlugin instance.
-```azure
-vw = vc.widget(height=900, plugins=[plugin], remount_on_uid_change=False)
-vw
-```
+The prototype application returns the Vitessce configuration as a JSON. 
+The production application may need to return the native Vitessce object.
+
 ### response
-* 200 -Vitessce interaction
+* 200 -a JSON of Vitessce configuration information.
 * Exception handling may include:
   * Passing along errors from SpatialQuery
   * 404 errors relating to invalid UUID or cell type
   * Passing along errors from Vitessce plugin
 
-# Alternative: using interactive_motif
-According to the notebook, 
-
-SpatialQuery provides `interactive_motif`, a one-line function to launch an interactive Vitessce widget for exploring spatial motifs in Jupyter notebooks. The widget includes spatial scatter plots, cell type browsers, and an interactive query panel supporting motif discovery as listed above for real-time motif enrichment analysis.
-
-Note that this would only work in a Jupyter Notebook.
-```azure
-interactive_motif(single_sp, zarr_path='./interactive_motif.zarr')
-```
