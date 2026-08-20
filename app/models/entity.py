@@ -49,7 +49,6 @@ class Entity:
         :return: if there is a dataset entity with id=datasetid, the uuid.
         """
         url = f'{self.urlbase}.{self.consortium}.org/entities/{datasetid}'
-        print(url)
         response = requests.get(url=url, headers=self.headers)
 
         if response.status_code == 200:
@@ -77,5 +76,6 @@ class Entity:
         else:
             abort(response.status_code, f'Error after calling /entities GET endpoint in entity-api '
                                         f'for dataset {datasetid}')
+
 
 

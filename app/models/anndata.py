@@ -17,7 +17,9 @@ class Anndata:
         self.adatas = []
         self.adatas_zarr_paths = []
 
-        self.adatas.append(ad.read_h5ad('datasets/' + self.dataset_uuid + '/secondary_analysis.h5ad'))
-        self.adata_zarr_paths.append('datasets/' + self.dataset_uuiduuid + '/hubmap_ui/anndata-zarr/secondary_analysis.zarr')
-        num_cells = np.sum([adata.n_obs for adata in self.adatas])
-        print(f"Number of total cells: {num_cells}")
+        # Hard-coded file references until we determine how to obtain
+        # links directly to files.
+        #self.adatas.append(ad.read_h5ad('datasets/' + self.dataset_uuid + '/secondary_analysis.h5ad'))
+        self.adatas.append(ad.read_h5ad('/Users/jas971/spatial-query/secondary_analysis.h5ad'))
+        self.adata_zarr_paths.append('/Users/jas971/spatial-query/anndata-zarr/secondary_analysis.zarr')
+        self.num_cells = np.sum([adata.n_obs for adata in self.adatas])

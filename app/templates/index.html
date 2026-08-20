@@ -7,10 +7,9 @@
     <img src="/static/spatial-query.png" alt="SpatialQuery" data-height="234" style="max-height: 50px; padding: 10px;">
     <img src="/static/vitessce.png" alt="Vitessce" data-height="234" style="max-height: 50px; padding: 10px;">
     <br>
-    <!--<h4>Select Dataset</h4>-->
 </div>
 <h3>Select Consortium and Dataset</h3>
-<form method=post>
+<form method=post id="spatialquery-form" onsubmit="return spinner_index(this);">
     <div class="container-fluid">
         <br>
         <div>
@@ -36,11 +35,10 @@
         </div>
         <br>
         <div>
-            <button type="submit"  class="btn btn-primary btn-lg"
-                    value="Search" onclick="spinner_index()">Get SpatialQuery Vitessce data</button>
+            <button type="submit" class="btn btn-primary btn-lg" value="Search">Get SpatialQuery Vitessce data</button>
         </div>
         <br>
-        <!-- Spinner that displays while logging in -->
+        <!-- Spinner that displays while request is processing -->
         <div id="spinner" class="loading">
         </div>
         <br>
