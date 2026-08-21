@@ -67,11 +67,9 @@ def login():
     if 'state' in request.args:
         consortium = request.args.get('state').split(' ')[0]
         datasetid = request.args.get('state').split(' ')[1]
-        celltype = request.args.get('state').split(' ')[2]
     else:
         consortium = session['consortium']
         datasetid = session['datasetid']
-        celltype = session['celltype']
 
     client = load_app_client(consortium)
 
@@ -82,7 +80,7 @@ def login():
     # If there's no "code" argument in the request object, then this is the first execution of the route.
     # Redirect out to Globus Auth, identifying the consortium and donor id via the state key.
     if 'code' not in request.args:
-        state = f'{session["consortium"]} {session["datasetid"]} {session["celltype"]}'
+        state = f'{session["consortium"]} {session["datasetid"]}'
         params: dict = {"scope": "openid profile email"
                                  " urn:globus:auth:scope:transfer.api.globus.org:all"
                                  " urn:globus:auth:scope:auth.globus.org:view_identities"
@@ -109,7 +107,6 @@ def login():
         session['consortium'] = consortium
         session['userid'] = user_info.get('preferred_username')
         session['datasetid'] = datasetid
-        session['celltype'] = celltype
 
-        # Redirect to the appropriate page, based on the workflow.
-        return redirect(f'/get-spqv')
+        # Redirect to the page that obtains inputs for the SpatialQuery/Vitessce integration.
+        return redirect(f'/spatialqueryvitessce-inputs/{datasetid}')

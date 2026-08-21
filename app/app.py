@@ -8,6 +8,7 @@ from models.appconfig import AppConfig
 from routes.auth.auth import login_blueprint
 from routes.globus.globus import globus_blueprint
 from routes.get_spqv.get_spqv import get_spqv_blueprint
+from routes.spatialqueryvitessce_inputs.spatialqueryvitessce_inputs import spatialqueryvitessceinputs_blueprint
 
 # Configure consistent logging. This is done at the beginning of each module instead of with a superclass of
 # logger to avoid the need to overload function calls to logger.
@@ -36,6 +37,7 @@ class SpatialUI:
         self.app.register_blueprint(login_blueprint)
         self.app.register_blueprint(globus_blueprint)
         self.app.register_blueprint(get_spqv_blueprint)
+        self.app.register_blueprint(spatialqueryvitessceinputs_blueprint)
 
         # The consortium authentication token is stored in a session cookie.
         # Set cookie expiration:

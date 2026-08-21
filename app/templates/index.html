@@ -1,4 +1,4 @@
-<!--Globus login page-->
+<!--Globus login page for demonstration application-->
 {% extends 'base.html' %}
 
 {% block content %}
@@ -26,6 +26,7 @@
             <label for="datasetid">Dataset ID</label>
             <input type="text" id="datasetid" name="datasetid" class="form-control" style="width: 20ch;" value="HBM847.GZGD.668">
         </div>
+        <!-- Cell type selection moved to api path parameter.
         <div>
             <label for="celltype">Cell type</label>
             <input type="text" id="celltype" name="celltype" class="form-control" style="width: 20ch;" value="podocyte">
@@ -33,9 +34,10 @@
         <div>
             &#8679; ID format is <i>(CCCnnn.XXXX.nnn)</i>, with <i>CCC</i> in (HBM,SNT); <i>n</i> integer; <i>X</i> non-numeric
         </div>
+        -->
         <br>
         <div>
-            <button type="submit" class="btn btn-primary btn-lg" value="Search">Get SpatialQuery Vitessce data</button>
+            <button type="submit" class="btn btn-primary btn-lg" value="Search">Get SpatialQuery Vitessce inputs</button>
         </div>
         <br>
         <!-- Spinner that displays while request is processing -->
