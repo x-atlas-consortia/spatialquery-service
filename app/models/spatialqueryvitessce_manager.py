@@ -4,6 +4,8 @@ SpatialQuery/Vitessce integration class.
 """
 import warnings
 import pandas as pd
+import numpy as np
+import anndata as ad
 import zarr
 from zarr.storage import LocalStore
 
@@ -22,19 +24,15 @@ warnings.filterwarnings("ignore")
 pd.set_option('display.max_colwidth', 1000)
 pd.set_option('display.max_columns', 500)
 
-from .anndata import Anndata
+class SpatialQueryVitessceManager:
 
-class SpatialQueryVitessce:
-
-    def __init__(self, anndata: Anndata, celltype: str):
+    def __init__(self, absolute_file_path:str):
 
         """
 
-        :param anndata: Anndata object of data products for a dataset
-        :param celltype: preferred term for the cell type used as an anchor motif
+        :param absolute_file_path: absolute file path to a set of secondary analysis files
+
         """
-        self.anndata = anndata
-        self.celltype = celltype
 
         spatial_key = 'X_spatial'
         label_key = 'predicted_label'
@@ -45,7 +43,15 @@ class SpatialQueryVitessce:
         one file.
         """
 
-        self.adata = self.anndata.adatas[0]
+        print('Loading secondary analysis data')
+        # debug: hard-coded
+        adata_path = '/Users/jas971/spatial-query/secondary_analysis.h5ad'
+        #adata_path = f'{absolute_file_path}/secondary_analysis.h5ad'
+
+        self.adata = ad.read_h5ad(adata_path)
+        # debug: hard-coded
+        #self.zarr_paths = f'{absolute_file_path}/secondary_analysis.zarr'
+        self.zarr_paths = '/Users/jas971/spatial-query/secondary-analysis.zarr'
 
         self.spatial_key = 'X_spatial'
         self.label_key = 'predicted_label'
@@ -65,16 +71,14 @@ class SpatialQueryVitessce:
             if_normalize_spatial_coord=True,
         )
 
-
-    def find_fp_knn(self)->pd.DataFrame:
+    def find_fp_knn(self, celltype: str)->pd.DataFrame:
         """
         Wrapper for the find_fp_kpp function of the SpatialQuery API
 
         """
-        central_ct = self.celltype
-        print('central cell type', central_ct)
+        print('central cell type', celltype)
         fp_knn = self.single_sp.find_fp_knn(
-            ct=central_ct,
+            ct=celltype,
             k=30,
             min_support=0.7
         )
@@ -92,11 +96,8 @@ class SpatialQueryVitessce:
 
         """
 
-        """
-                Initialize SpatialQuery Vitessce plugin
-                """
         print('Initializing SpatialQuery Vitessce plugin')
-        self.plugin = SpatialQueryPlugin(self.adata,
+        plugin = SpatialQueryPlugin(self.adata,
                                          spatial_key=self.spatial_key,
                                          label_key=self.label_key,
                                          feature_name=self.feature_name)
@@ -116,7 +117,7 @@ class SpatialQueryVitessce:
         """
 
         dataset = vc.add_dataset("Query results").add_object(AnnDataWrapper(
-            adata_store=zarr.storage.LocalStore(self.anndata.adata_zarr_paths[0]),
+            adata_store=zarr.storage.LocalStore(self.zarr_paths),
             obs_feature_matrix_path="X",
             obs_set_paths=[f"obs/{self.label_key}"],
             obs_set_names=["Cell Type"],
@@ -143,7 +144,7 @@ class SpatialQueryVitessce:
 
         vc.link_views([spatial_view, lc_view, sets_view, features_view],
                       ["additionalObsSets", "obsSetColor"],
-                      [self.plugin.additional_obs_sets, self.plugin.obs_set_color]
+                      [plugin.additional_obs_sets, plugin.obs_set_color]
                       )
         vc.link_views_by_dict([spatial_view, lc_view], {
             "spotLayer": CL([

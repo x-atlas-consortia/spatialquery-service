@@ -21,3 +21,5 @@ ENTITY_BASE_URL='https://entity-api.dev'
 DATA_PORTAL_BASE_URL='https://data'
 # Search API
 SEARCH_BASE_URL='https://search-api.dev'
+# Ingest API
+INGEST_BASE_URL='https://ingest-api.dev'

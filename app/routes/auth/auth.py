@@ -108,5 +108,5 @@ def login():
         session['userid'] = user_info.get('preferred_username')
         session['datasetid'] = datasetid
 
-        # Redirect to the page that obtains inputs for the SpatialQuery/Vitessce integration.
-        return redirect(f'/spatialqueryvitessce-inputs/{datasetid}')
+        # Redirect to the page that obtains information for the SpatialQuery/Vitessce integration.
+        return redirect(f'/spatialqueryvitessce/vitessce-config/{datasetid}')
