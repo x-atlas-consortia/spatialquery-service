@@ -66,6 +66,7 @@ class DatasetWithFiles:
 
             self.dataset = rjson
 
+
             return rjson
 
         elif response.status_code == 404:
@@ -132,6 +133,7 @@ class DatasetWithFiles:
 
             self.file_uuid = file_entity.get('uuid')
             self.files = file_entity.get('files')
+
             # Get the absolute file path to the dataset with the file associations.
             self.absolute_file_path = self._get_absolute_file_path(dataset_uuid=self.file_uuid)
 

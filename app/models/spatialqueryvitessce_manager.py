@@ -8,6 +8,8 @@ import numpy as np
 import anndata as ad
 import zarr
 from zarr.storage import LocalStore
+from flask import abort
+import os
 
 from SpatialQuery.spatial_query import spatial_query
 
@@ -44,19 +46,23 @@ class SpatialQueryVitessceManager:
         """
 
         print('Loading secondary analysis data')
-        # debug: hard-coded
+
+        # Development: emulate PSC file system on local machine.
         adata_path = '/Users/jas971/spatial-query/secondary_analysis.h5ad'
         #adata_path = f'{absolute_file_path}/secondary_analysis.h5ad'
-
+        if not os.path.exists(adata_path):
+            abort(404,f'The secondary_analysis.h5ad file was not found in path {adata_path}.')
         self.adata = ad.read_h5ad(adata_path)
-        # debug: hard-coded
+
+        # Development: emulate PSC file system on local machine.
         #self.zarr_paths = f'{absolute_file_path}/secondary_analysis.zarr'
         self.zarr_paths = '/Users/jas971/spatial-query/secondary-analysis.zarr'
+        if not os.path.exists(self.zarr_paths):
+            abort(404,f'The secondary_analysis.zarr directory was not found in path {self.zarr_paths}.')
 
         self.spatial_key = 'X_spatial'
         self.label_key = 'predicted_label'
         self.feature_name = 'hugo_symbol'
-
 
         print('Calling spatial_query')
         self.single_sp = spatial_query(
@@ -110,10 +116,6 @@ class SpatialQueryVitessceManager:
         DirectoryStore is no longer an attribute of zarr. 
         Based on a discussion in the zarr repo, I changed to 
         zarr.storage.LocalStore, which worked.
-        
-        I'm not sure whether this will work if the files are
-        in Globus instead of on the local machine. It may be necessary
-        to download the files first.
         """
 
         dataset = vc.add_dataset("Query results").add_object(AnnDataWrapper(
