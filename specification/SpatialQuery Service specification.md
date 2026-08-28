@@ -99,39 +99,45 @@ These endpoints handle authentication to Globus.
 The endpoints work in tandem, and in fact redirect to each other in a loop until the user
 is authenticated. Once the user has been authenticated, the /auth endpoint redirects to the /get_spqv route.
 
-## /get_spqv
-Performs Single Field of View (FOV) analysis of a dataset and provides results of analysis to the Vitessce plugin.
+## /vitessce-config
+Reads secondary analysis files related to a spatially-resolved dataset and returns a Vitessce configuration.
 
 ### Workflow
-##### 1. Load spatial transcriptomics data for the UUID, using relative paths. 
+##### 1. Identify the dataset's descendant with files
+In general, a specified dataset is part of a provenance chain of datasets. 
+To identify the set of secondary analysis files to use for Vitessce, the application
+examines the dataset and its descendant datasets and identifies the uuid for the 
+latest published descendant dataset. 
+
+The **datasetwithfiles.py** class file contains the code to identify files for a dataset.
+
+##### 2. Load spatial transcriptomics data for the UUID, using relative paths. 
 It is necessary to:
 1. Load the **secondary_analysis.h5ad** file associated with the dataset.
 2. Identify the path to the **secondary_analysis.zarr** associated with the dataset.
 
-The prototype application reads these files locally and manages them in the _Anndata_ class (**anndata.py**).
-
-The production application will need either to point to files in Globus or download them locally.
+The prototype application reads these files from the proveanance file system (PSC) and manages them in the _SpatialQueryVitessce_ class (**spatialqueryvitessce_manager.py**).
 
 ##### 2. Initialize SpatialQuery Single FOV analysis
 The prototype application encapsulates integration with SpatialQuery using the _SpatialQueryVitessce_ class (**spatialquery_vitessce.py**).
 
 The **init** function of the __SpatialQueryVitessce_ class initializes SpatialQuery.
 
-The **find_fp_knn** function of the class is an example of how to wrap calls to the SpatialQuery API.
+The **find_fp_knn** function of the class is an example of how to wrap calls to the SpatialQuery API. This function is not
+needed for Vitessce integration.
 
 ##### 3. Initialize Vitessce SpatialQuery plugin
-The _SpatialQueryVitessce_ class initializes the SpatialQuery Vitessce plugin.
+The _SpatialQueryVitessceManager_ class initializes the SpatialQuery Vitessce plugin.
 
 ##### 4. Configure Vitessce with dataset and views of interest. 
-The **get_vitessce_widget** function of the _SpatialQueryVitessce_ class works with data from the _Anndata_ class 
+The **get_vitessce_widget** function of the _SpatialQueryVitessceManager_ class works with secondary analysis data 
 to populate a Vitessce Widget with information from the SpatialQuery plugin.
 
 ##### 5. Render the Vitessce widget and pass the SpatialQueryPlugin instance.
-The prototype application returns the Vitessce configuration as a JSON. 
-The production application may need to return the native Vitessce object.
+The prototype application returns the Vitessce configuration as a JSON.
 
 ### response
-* 200 -a JSON of Vitessce configuration information.
+* 200 -a JSON that includes the Vitessce configuration information.
 * Exception handling may include:
   * Passing along errors from SpatialQuery
   * 404 errors relating to invalid UUID or cell type
