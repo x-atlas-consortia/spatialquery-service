@@ -1,13 +1,10 @@
-# SpatialQuery service prototy
+# SpatialQuery service prototype
 
-The Python script in this directory demonstrates
+This directory features a web page that supports
 an integration between:
 1. HuBMAP entity-api
 2. SpatialQuery
 3. Vitessce
 
 ## Use case
-Single Field of View (FOV) analysis of a known spatially-transcribed dataset.
-
-## Prototype assumptions
-simple URL execution
+Vitessce visualization
