@@ -1,11 +1,7 @@
 """
 spatialqueryvitessce_inputs.py
 
-Obtains inputs to be used to configure a SpatialQuery Vitessce configuration:
-1. Locations of secondary analysis files:
-   a. AnnData
-   b. Zarr
-2. List of cell types in the AnnData file?
+Obtains inputs to be used to configure a SpatialQuery Vitessce configuration.
 
 """
 from flask import Blueprint, make_response, jsonify, session, request

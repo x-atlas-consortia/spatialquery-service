@@ -3,6 +3,8 @@ spatialquery_vitessce.py
 SpatialQuery/Vitessce integration class.
 """
 import warnings
+
+import SpatialQuery
 import pandas as pd
 import numpy as np
 import anndata as ad
@@ -48,34 +50,64 @@ class SpatialQueryVitessceManager:
         print('Loading secondary analysis data')
 
         # Development: emulate PSC file system on local machine.
+        print('DEV EMULATION OF FILE SYSTEM')
+        print('HARD-CODED absolute file path')
+        print('CHANGE DEPLOYED TO PSC SERVER')
         adata_path = '/Users/jas971/spatial-query/secondary_analysis.h5ad'
+
+        # Production: absolute file path in PSC environment.
         #adata_path = f'{absolute_file_path}/secondary_analysis.h5ad'
         if not os.path.exists(adata_path):
             abort(404,f'The secondary_analysis.h5ad file was not found in path {adata_path}.')
         self.adata = ad.read_h5ad(adata_path)
 
         # Development: emulate PSC file system on local machine.
-        #self.zarr_paths = f'{absolute_file_path}/secondary_analysis.zarr'
-        self.zarr_paths = '/Users/jas971/spatial-query/secondary-analysis.zarr'
-        if not os.path.exists(self.zarr_paths):
+        self.zarr_paths = '/Users/jas971/spatial-query/secondary_analysis.zarr'
+
+        # Production: absolute file path in PSC environment.
+        # self.zarr_paths = f'{absolute_file_path}/secondary_analysis.zarr'
+        if not os.path.isdir(self.zarr_paths):
             abort(404,f'The secondary_analysis.zarr directory was not found in path {self.zarr_paths}.')
 
-        self.spatial_key = 'X_spatial'
-        self.label_key = 'predicted_label'
-        self.feature_name = 'hugo_symbol'
+        """
+        Initialization parameters:
+        1. spatial_key and feature_name are static.
+        2. label_key is based on the form of annotation:
+           a. predicted_label for legacy Azimuth datasets
+           b. CL_label for pan-Human Azimuth datasets
+        """
 
-        print('Calling spatial_query')
-        self.single_sp = spatial_query(
-            adata=self.adata,
-            dataset="single-fov",
-            spatial_key=self.spatial_key,
-            label_key=self.label_key,
-            leaf_size=10,
-            build_gene_index=False,
-            feature_name=self.feature_name,
-            if_lognorm=True,
-            if_normalize_spatial_coord=True,
-        )
+        self.spatial_key = 'X_spatial'
+        self.feature_name = 'hugo_symbol'
+        self.label_key = ''
+        label_keys = ['predicted_label','CL_label']
+
+
+        found_for_label_key = False
+        for k in label_keys:
+            if not found_for_label_key:
+                print(f'Trying spatial_query using key {k}...')
+                try:
+                    self.single_sp = spatial_query(
+                        adata=self.adata,
+                        dataset="single-fov",
+                        spatial_key=self.spatial_key,
+                        label_key=k,
+                        leaf_size=10,
+                        build_gene_index=False,
+                        feature_name=self.feature_name,
+                        if_lognorm=True,
+                        if_normalize_spatial_coord=True
+                    )
+                    found_for_label_key = True
+                    self.label_key = k
+                    break
+                except Exception as e:
+                    raise e
+
+        if not found_for_label_key:
+            abort(404,f'No labels corresponding to {label_keys} in {adata_path}.')
+
 
     def find_fp_knn(self, celltype: str)->pd.DataFrame:
         """

@@ -27,6 +27,7 @@ class DatasetWithFiles:
         self.dataset_id = dataset_id
         self.file_uuid = ''
         self.files = []
+        self.label_key = ''
 
         # Build consortium-specific API headers.
         apihelper = ApiHelper()
@@ -65,7 +66,6 @@ class DatasetWithFiles:
                 abort(400,f'The entity with ID {dataset_id} is not a dataset in {self.consortium}.')
 
             self.dataset = rjson
-
 
             return rjson
 
@@ -106,6 +106,7 @@ class DatasetWithFiles:
             # Get a subset of descendant information.
             url_descendants = f'{self.urlbase}.{self.consortium}.org/descendants-info/{self.dataset_uuid}?include=uuid,status,entity_type,last_modified_timestamp,files'
             response = requests.get(url=url_descendants, headers=self.headers)
+
             if response.status_code == 200:
 
                 descendants = response.json()
@@ -128,14 +129,20 @@ class DatasetWithFiles:
                                     file_entity = d
 
 
-            if file_entity == {}:
-                abort(404,f'No files associated with dataset {self.dataset_id}.')
+                if file_entity == {}:
+                    abort(404,f'No files associated with dataset {self.dataset_id}.')
 
-            self.file_uuid = file_entity.get('uuid')
-            self.files = file_entity.get('files')
+                self.file_uuid = file_entity.get('uuid')
+                self.files = file_entity.get('files')
 
-            # Get the absolute file path to the dataset with the file associations.
-            self.absolute_file_path = self._get_absolute_file_path(dataset_uuid=self.file_uuid)
+                # Get the absolute file path to the dataset with the file associations.
+                self.absolute_file_path = self._get_absolute_file_path(dataset_uuid=self.file_uuid)
+
+            elif response.status_code == 404:
+                abort(404, f'No file associated with dataset {self.dataset_id}.')
+            else:
+                abort(response.status_code, response.json().get('error'))
+
 
     def _get_absolute_file_path(self, dataset_uuid:str):
         """
