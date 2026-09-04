@@ -20,6 +20,7 @@ def globus():
         consortium = request.form.get('consortium')
         datasetid = request.form.get('datasetid')
         celltype = request.form.get('celltype')
+        endpoint = request.form.get('endpoint')
 
         # Get the consortium from the request.
         if consortium.upper() not in ['HUBMAP', 'SENNET']:
@@ -29,6 +30,7 @@ def globus():
         session['consortium'] = f'CONTEXT_{consortium}'
         session['datasetid'] = datasetid
         session['celltype'] = celltype
+        session['endpoint'] = endpoint
 
         """
         Authenticate to Globus via the login route.

@@ -6,7 +6,7 @@ from flask import Flask, render_template
 from models.appconfig import AppConfig
 from routes.auth.auth import login_blueprint
 from routes.globus.globus import globus_blueprint
-from routes.spatialqueryvitessce.spatialqueryvitessce import spatialqueryvitessce_blueprint
+from routes.spatialquery.spatialquery import spatialquery_blueprint
 
 # Configure consistent logging. This is done at the beginning of each module instead of with a superclass of
 # logger to avoid the need to overload function calls to logger.
@@ -34,7 +34,7 @@ class SpatialUI:
         # Register route Blueprints.
         self.app.register_blueprint(login_blueprint)
         self.app.register_blueprint(globus_blueprint)
-        self.app.register_blueprint(spatialqueryvitessce_blueprint)
+        self.app.register_blueprint(spatialquery_blueprint)
 
         # The consortium authentication token is stored in a session cookie.
         # Set cookie expiration:

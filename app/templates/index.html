@@ -26,15 +26,34 @@
             <label for="datasetid">Dataset ID</label>
             <input type="text" id="datasetid" name="datasetid" class="form-control" style="width: 20ch;" value="HBM847.GZGD.668">
         </div>
-        <!-- Cell type selection moved to api path parameter.
         <div>
-            <label for="celltype">Cell type</label>
-            <input type="text" id="celltype" name="celltype" class="form-control" style="width: 20ch;" value="podocyte">
+            <label for="endpoint">endpoint</label>
+            <select id="endpoint"  name="endpoint" class="form-control" style="width: 20 ch;">
+                <option value="find_fp_knn" selected>find_fp_knn</option>
+                <option value="find_fp_dist">find_fp_dist</option>
+                <option value="find_patterns_grid">find_patterns_grid</option>
+                <option value="find_patterns_rand">find_patterns_rand</option>
+                <option value="motif_enrichment_knn">motif_enrichment_knn</option>
+                <option value="motif_enrichment_dist">motif_enrichment_dist</option>
+                <option value="vitessce-config">vitessce-config</option>
+            </select>
         </div>
         <div>
-            &#8679; ID format is <i>(CCCnnn.XXXX.nnn)</i>, with <i>CCC</i> in (HBM,SNT); <i>n</i> integer; <i>X</i> non-numeric
+            <label for="ct">celltype (anchor for motif enrichment)</label>
+            <input type="text" id="ct" name="ct" class="form-control" style="width: 20ch;" value="podocyte">
         </div>
-        -->
+        <div>
+            <label for="k">k (number of nearest neighbors)</label>
+            <input type="text" id="k" name="k" class="form-control" style="width: 20ch;" value="30">
+        </div>
+        <div>
+            <label for="min_support">minimum level of support</label>
+            <input type="text" id="min_support" name="k" class="form-control" style="width: 20ch;" value="0.7">
+        </div>
+        <div>
+            <label for="max_distance">maximum distance</label>
+            <input type="text" id="max_distance" name="max_distance" class="form-control" style="width: 20ch;" value="20">
+        </div>
         <br>
         <div>
             <button type="submit" class="btn btn-primary btn-lg" value="Search">Get SpatialQuery Vitessce inputs</button>

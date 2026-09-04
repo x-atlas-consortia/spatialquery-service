@@ -1,6 +1,6 @@
 """
-spatialquery_vitessce.py
-SpatialQuery/Vitessce integration class.
+spatialquery_manager.py
+SpatialQuery manager class.
 """
 import warnings
 
@@ -28,7 +28,7 @@ warnings.filterwarnings("ignore")
 pd.set_option('display.max_colwidth', 1000)
 pd.set_option('display.max_columns', 500)
 
-class SpatialQueryVitessceManager:
+class SpatialQueryManager:
 
     def __init__(self, absolute_file_path:str):
 
@@ -109,19 +109,21 @@ class SpatialQueryVitessceManager:
             abort(404,f'No labels corresponding to {label_keys} in {adata_path}.')
 
 
-    def find_fp_knn(self, celltype: str)->pd.DataFrame:
+    def find_fp_knn(self, ct: str, k: int, min_support:float, max_distance:float)->pd.DataFrame:
         """
         Wrapper for the find_fp_kpp function of the SpatialQuery API
 
         """
-        print('central cell type', celltype)
-        fp_knn = self.single_sp.find_fp_knn(
-            ct=celltype,
-            k=30,
-            min_support=0.7
+        df_fp_knn = self.single_sp.find_fp_knn(
+            ct=ct,
+            k=k,
+            min_support=min_support,
+            max_dist=max_distance
         )
 
-        return fp_knn
+        return df_fp_knn.to_dict(orient='records')
+
+
 
     def get_vitessce_widget(self):
         """
