@@ -89,3 +89,47 @@ def get_spatialquery_find_fp_knn(datasetid):
     return make_response(jsonify(dict_response), 200)
 
 
+@spatialquery_blueprint.route('/find_fp_dist/<datasetid>', methods=['GET'])
+def get_spatialquery_find_fp_dist(datasetid):
+
+    """
+        Obtain for the specified dataset id:
+        1. uuid
+        2. uuid for the dataset in the dataset's provenance chain that
+           has secondary analysis files
+        3. absolute file path to the secondary analysis files
+        """
+    print(f'Getting file information for dataset {datasetid}')
+    dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
+
+    """
+    Initialize SpatialQuery using the secondary analysis files.
+    """
+    spv = SpatialQueryManager(absolute_file_path=dataset_with_files.absolute_file_path)
+
+    celltype = request.args.get('celltype')
+    if celltype is None:
+        celltype = "podocyte"
+
+
+    min_support = request.args.get('min_support')
+    if min_support is None:
+        min_support = 0.7
+    else:
+        min_support = float(min_support)
+
+    max_distance = request.args.get('max_distance')
+    if max_distance is None:
+        max_distance = 20
+    else:
+        max_distance = float(max_distance)
+
+    min_size = request.args.get('max_size')
+    if min_size is None:
+        min_size = 0
+    else:
+        min_size = float(min_size)
+
+    dict_response = spv.find_fp_dist(ct=celltype, max_distance=max_distance, min_size=min_size, min_support=min_support)
+    return make_response(jsonify(dict_response), 200)
+

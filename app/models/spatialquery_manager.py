@@ -123,7 +123,19 @@ class SpatialQueryManager:
 
         return df_fp_knn.to_dict(orient='records')
 
+    def find_fp_dist(self, ct: str, max_distance: float, min_size: float, min_support: float) -> pd.DataFrame:
+        """
+        Wrapper for the find_fp_dist function of the SpatialQuery API
 
+        """
+        df_fp_knn = self.single_sp.find_fp_knn(
+            ct= ct,
+            max_distance=max_distance,
+            min_size=min_size,
+            min_support=min_support
+        )
+
+        return df_fp_knn.to_dict(orient='records')
 
     def get_vitessce_widget(self):
         """
