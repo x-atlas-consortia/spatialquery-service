@@ -84,6 +84,9 @@ def login():
         figsize_height = request.args.get('state').split(' ')[10]
         return_cellID = request.args.get('state').split(' ')[11]
         return_grid = request.args.get('state').split(' ')[12]
+        n_points = request.args.get('state').split(' ')[13]
+        seed = request.args.get('state').split(' ')[14]
+
 
     else:
         consortium = session['consortium']
@@ -99,7 +102,8 @@ def login():
         figsize_height = session['figsize_height']
         return_cellID = session['return_cellID']
         return_grid = session['return_grid']
-
+        n_points = session['n_points']
+        seed = session['seed']
 
     client = load_app_client(consortium)
 
@@ -123,6 +127,8 @@ def login():
                  f'{session["figsize_height"]} '
                  f'{session["return_cellID"]} '
                  f'{session["return_grid"]} '
+                 f'{session["n_points"]} '
+                 f'{session["seed"]} '
                  )
         params: dict = {"scope": "openid profile email"
                                  " urn:globus:auth:scope:transfer.api.globus.org:all"
@@ -161,6 +167,8 @@ def login():
         session['figsize_height'] = figsize_height
         session['return_cellID'] = return_cellID
         session['return_grid'] = return_grid
+        session['n_points'] = n_points
+        session['seed'] = seed
 
 
         # Redirect to the page that obtains information for the SpatialQuery/Vitessce integration.
@@ -194,5 +202,17 @@ def login():
                 f'&return_cellID={return_cellID}'
                 f'&return_grid={return_grid}'
                 )
+        elif endpoint == 'find_patterns_rand':
+            return redirect(
+                f'/spatialquery/{endpoint}/{datasetid}'
+                f'?max_distance={max_distance}'
+                f'&n_points={n_points}'
+                f'&min_support={min_support}'
+                f'&min_size={min_size}'
+                f'&if_display={if_display}'
+                f'&figsize=({figsize_width},{figsize_height})'
+                f'&return_cellID={return_cellID}'
+                f'&seed={seed}'
+            )
 
 

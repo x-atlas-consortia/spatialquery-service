@@ -81,6 +81,14 @@
             <input type="text" id="return_grid" name="return_grid" class="form-control" style="width: 20ch;" value="False">
         </div>
         <div>
+            <label for="n_points">n_points (number of random points to generate)</label>
+            <input type="text" id="n_points" name="n_points" class="form-control" style="width: 20ch;" value=1000>
+        </div>
+        <div>
+            <label for="seed">seed (Random seed for reproducibility)</label>
+            <input type="text" id="seed" name="seed" class="form-control" style="width: 20ch;" value=2023>
+        </div>
+        <div>
             <button type="submit" class="btn btn-primary btn-lg" value="Search">Call SpatialQuery endpoint</button>
         </div>
         <br>

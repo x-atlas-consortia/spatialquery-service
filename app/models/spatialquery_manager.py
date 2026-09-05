@@ -176,6 +176,40 @@ class SpatialQueryManager:
 
             abort(500, str(e))
 
+    def find_patterns_rand(self,
+                           max_distance:float,
+                           n_points: int,
+                           min_support:float,
+                           min_size: float,
+                           if_display:bool,
+                           figsize:tuple,
+                           return_cellID:bool,
+                           seed:int) -> pd.DataFrame:
+        """
+        Wrapper for the find_patterns_rand function of the SpatialQuery API.
+        Refer to the SpatialQuery API documentation for descriptions of parameters.
+        """
+
+        try:
+            df_fp_rand =  self.single_sp.find_patterns_rand(max_dist=max_distance,
+                                                            n_points=n_points,
+                                                            min_support=min_support,
+                                                            min_size=min_size,
+                                                            if_display=if_display,
+                                                            figsize=figsize,
+                                                            return_cellID=return_cellID,
+                                                            seed=seed)
+            return df_fp_rand.to_dict(orient='records')
+
+        except RuntimeError as e:
+            """
+            Issue: find_patterns_grid currently uses an interactive plotter.
+            Error message is:
+            Cannot create a GUI FigureManager outside the main thread using the MacOS backend. Use a non-interactive backend like 'agg' to make plots on worker threads.
+            """
+
+            abort(500, str(e))
+
     def get_vitessce_widget(self):
         """
         Does the following:

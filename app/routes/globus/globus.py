@@ -36,6 +36,8 @@ def globus():
         figsize_height = request.form.get('figsize_height')
         return_cellID = request.form.get('return_cellID')
         return_grid = request.form.get('return_grid')
+        n_points = request.form.get('n_points')
+        seed = request.form.get('seed')
 
 
         # Get the consortium from the request.
@@ -58,6 +60,8 @@ def globus():
         session['figsize_height'] = figsize_height
         session['return_cellID'] = return_cellID
         session['return_grid'] = return_grid
+        session['n_points'] = n_points
+        session['seed'] = seed
 
 
         """
