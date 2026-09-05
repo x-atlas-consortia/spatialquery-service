@@ -1,6 +1,6 @@
 """
 Index route that:
-1. obtains Globus environment and donor id from a WTForm (GlobusForm)
+1. obtains Globus environment, dataset id, and SpatialQuery API parameters from a form
 2. authenticates to Globus
 """
 
@@ -17,10 +17,26 @@ def globus():
     """
 
     if request.method == 'POST':
+
+        # Globus environment
         consortium = request.form.get('consortium')
-        datasetid = request.form.get('datasetid')
-        celltype = request.form.get('celltype')
+
+        # service endpoint path
         endpoint = request.form.get('endpoint')
+
+        # SpatialQuery parameters
+        datasetid = request.form.get('datasetid')
+        ct = request.form.get('ct')
+        k = request.form.get('k')
+        min_support = request.form.get('min_support')
+        max_distance = request.form.get('max_distance')
+        min_size = request.form.get('min_size')
+        if_display = request.form.get('if_display')
+        figsize_width = request.form.get('figsize_width')
+        figsize_height = request.form.get('figsize_height')
+        return_cellID = request.form.get('return_cellID')
+        return_grid = request.form.get('return_grid')
+
 
         # Get the consortium from the request.
         if consortium.upper() not in ['HUBMAP', 'SENNET']:
@@ -29,15 +45,27 @@ def globus():
 
         session['consortium'] = f'CONTEXT_{consortium}'
         session['datasetid'] = datasetid
-        session['celltype'] = celltype
+
         session['endpoint'] = endpoint
+
+        session['ct'] = ct
+        session['k'] = k
+        session['min_support'] = min_support
+        session['max_distance'] = max_distance
+        session['min_size'] = min_size
+        session['if_display'] = if_display
+        session['figsize_width'] = figsize_width
+        session['figsize_height'] = figsize_height
+        session['return_cellID'] = return_cellID
+        session['return_grid'] = return_grid
+
 
         """
         Authenticate to Globus via the login route.
         If login is successful, Globus will redirect to the edit page.
         """
         #Indicate the workflow (edit, export, doi) to the Globus auth.
-        session['workflow'] = 'get_uuids'
+        #session['workflow'] = 'get_uuids'
 
         # Authenticate to Globus via the login route.
         # If login is successful, Globus will redirect to the get-uuids page.

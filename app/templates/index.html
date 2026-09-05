@@ -27,7 +27,7 @@
             <input type="text" id="datasetid" name="datasetid" class="form-control" style="width: 20ch;" value="HBM847.GZGD.668">
         </div>
         <div>
-            <label for="endpoint">endpoint</label>
+            <label for="endpoint"><strong>SpatialQuery service endpoint path</strong></label>
             <select id="endpoint"  name="endpoint" class="form-control" style="width: 20 ch;">
                 <option value="find_fp_knn" selected>find_fp_knn</option>
                 <option value="find_fp_dist">find_fp_dist</option>
@@ -38,6 +38,7 @@
                 <option value="vitessce-config">vitessce-config</option>
             </select>
         </div>
+        <h3>Parameter values (used by multiple endpoints)</h3>
         <div>
             <label for="ct">celltype (anchor for motif enrichment)</label>
             <input type="text" id="ct" name="ct" class="form-control" style="width: 20ch;" value="podocyte">
@@ -48,11 +49,11 @@
         </div>
         <div>
             <label for="min_support">minimum level of support</label>
-            <input type="text" id="min_support" name="k" class="form-control" style="width: 20ch;" value="0.7">
+            <input type="text" id="min_support" name="min_support" class="form-control" style="width: 20ch;" value="0.7">
         </div>
         <div>
             <label for="max_distance">maximum distance</label>
-            <input type="text" id="max_distance" name="max_distance" class="form-control" style="width: 20ch;" value="0">
+            <input type="text" id="max_distance" name="max_distance" class="form-control" style="width: 20ch;" value="20">
         </div>
         <div>
             <label for="min_size">min_size</label>
@@ -60,7 +61,27 @@
         </div>
         <br>
         <div>
-            <button type="submit" class="btn btn-primary btn-lg" value="Search">Get SpatialQuery Vitessce inputs</button>
+            <label for="figsize_width">figure size width</label>
+            <input type="text" id="figsize_width" name="figsize_width" class="form-control" style="width: 20ch;" value="10">
+        </div>
+        <div>
+            <label for="figsize_height">figure size height</label>
+            <input type="text" id="figsize_height" name="figsize_height" class="form-control" style="width: 20ch;" value="5">
+        </div>
+        <div>
+            <label for="if_display">if display</label>
+            <input type="text" id="if_display" name="if_display" class="form-control" style="width: 20ch;" value="True">
+        </div>
+        <div>
+            <label for="return_cellID">return cell ID</label>
+            <input type="text" id="return_cellID" name="return_cellID" class="form-control" style="width: 20ch;" value="False">
+        </div>
+        <div>
+            <label for="return_grid">return grid</label>
+            <input type="text" id="return_grid" name="return_grid" class="form-control" style="width: 20ch;" value="False">
+        </div>
+        <div>
+            <button type="submit" class="btn btn-primary btn-lg" value="Search">Call SpatialQuery endpoint</button>
         </div>
         <br>
         <!-- Spinner that displays while request is processing -->

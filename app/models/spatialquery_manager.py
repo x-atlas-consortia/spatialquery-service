@@ -50,9 +50,8 @@ class SpatialQueryManager:
         print('Loading secondary analysis data')
 
         # Development: emulate PSC file system on local machine.
-        print('DEV EMULATION OF FILE SYSTEM')
-        print('HARD-CODED absolute file path')
-        print('CHANGE DEPLOYED TO PSC SERVER')
+        print('DEV EMULATION OF FILE SYSTEM WITH HARD-CODED absolute file path')
+        print('IN PRODUCTION, SET adata_path TO PATH IN PSC FILE SYSTEM')
         adata_path = '/Users/jas971/spatial-query/secondary_analysis.h5ad'
 
         # Production: absolute file path in PSC environment.
@@ -112,6 +111,7 @@ class SpatialQueryManager:
     def find_fp_knn(self, ct: str, k: int, min_support:float, max_distance:float)->pd.DataFrame:
         """
         Wrapper for the find_fp_kpp function of the SpatialQuery API
+        Refer to the SpatialQuery API documentation for descriptions of parameters.
 
         """
         df_fp_knn = self.single_sp.find_fp_knn(
@@ -125,17 +125,56 @@ class SpatialQueryManager:
 
     def find_fp_dist(self, ct: str, max_distance: float, min_size: float, min_support: float) -> pd.DataFrame:
         """
-        Wrapper for the find_fp_dist function of the SpatialQuery API
+        Wrapper for the find_fp_dist function of the SpatialQuery API.
+        Refer to the SpatialQuery API documentation for descriptions of parameters.
 
         """
-        df_fp_knn = self.single_sp.find_fp_knn(
+        df_fp_dist = self.single_sp.find_fp_dist(
             ct= ct,
-            max_distance=max_distance,
+            max_dist=max_distance,
             min_size=min_size,
             min_support=min_support
         )
 
-        return df_fp_knn.to_dict(orient='records')
+        return df_fp_dist.to_dict(orient='records')
+
+    def find_patterns_grid(self, max_distance:float,min_size:float,
+                                           min_support:float,
+                                           if_display:bool,
+                                           figsize:tuple,
+                                           return_cellID:bool,
+                                           return_grid:bool) -> pd.DataFrame:
+        """
+        Wrapper for the find_patterns_grid function of the SpatialQuery API.
+        Refer to the SpatialQuery API documentation for descriptions of parameters.
+        """
+
+        try:
+            df_fp_grid =  self.single_sp.find_patterns_grid(max_dist=max_distance,
+                                                        min_size=min_size,
+                                                        min_support=min_support,
+                                                        if_display=if_display,
+                                                        figsize=figsize,
+                                                        return_cellID=return_cellID,
+                                                        return_grid=return_grid)
+            if return_grid:
+                # Return the DataFrame.
+                return df_fp_grid.to_dict(orient='records')
+            else:
+                # Extract the DataFrame and the np.ndarray from the tuple response.
+                # Convert the DataFrame component (first element) to dict.
+                # Convert the np.ndarray (second element) to dict.
+                # Concatenate the dicts.
+                return df_fp_grid.to_dict(orient='records')
+
+        except RuntimeError as e:
+            """
+            Issue: find_patterns_grid currently uses an interactive plotter.
+            Error message is:
+            Cannot create a GUI FigureManager outside the main thread using the MacOS backend. Use a non-interactive backend like 'agg' to make plots on worker threads.
+            """
+
+            abort(500, str(e))
 
     def get_vitessce_widget(self):
         """

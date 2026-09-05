@@ -42,7 +42,7 @@ login_blueprint = Blueprint('login', __name__, url_prefix='/login')
 @login_blueprint.route('', methods=['GET'])
 def login():
     """
-    Login via Globus Auth for the curation and export workflows.
+    Login via Globus Auth for SpatialQuery workflows.
 
     This route is invoked twice for a workflow.
 
@@ -63,15 +63,43 @@ def login():
     if 'flashes' in session:
         session['flashes'].clear()
 
-    # Obtain consortium.
+    # Obtain state variables.
+    # Assumption: all parameters are available from the form that authenticates.
+
     if 'state' in request.args:
+        # Globus environment
         consortium = request.args.get('state').split(' ')[0]
+        # Dataset
         datasetid = request.args.get('state').split(' ')[1]
+        # service endpoint path
         endpoint = request.args.get('state').split(' ')[2]
+        # SpatialQuery parameters
+        ct = request.args.get('state').split(' ')[3]
+        k = request.args.get('state').split(' ')[4]
+        min_support = request.args.get('state').split(' ')[5]
+        max_distance = request.args.get('state').split(' ')[6]
+        min_size = request.args.get('state').split(' ')[7]
+        if_display = request.args.get('state').split(' ')[8]
+        figsize_width = request.args.get('state').split(' ')[9]
+        figsize_height = request.args.get('state').split(' ')[10]
+        return_cellID = request.args.get('state').split(' ')[11]
+        return_grid = request.args.get('state').split(' ')[12]
+
     else:
         consortium = session['consortium']
         datasetid = session['datasetid']
         endpoint = session['endpoint']
+        ct = session['ct']
+        k = session['k']
+        min_support = session['min_support']
+        max_distance = session['max_distance']
+        min_size = session['min_size']
+        if_display = session['if_display']
+        figsize_width = session['figsize_width']
+        figsize_height = session['figsize_height']
+        return_cellID = session['return_cellID']
+        return_grid = session['return_grid']
+
 
     client = load_app_client(consortium)
 
@@ -80,9 +108,22 @@ def login():
     client.oauth2_start_flow(redirect_uri, refresh_tokens=True)
 
     # If there's no "code" argument in the request object, then this is the first execution of the route.
-    # Redirect out to Globus Auth, identifying the consortium and donor id via the state key.
+    # Redirect out to Globus Auth, extracting parameters from the state key.
     if 'code' not in request.args:
-        state = f'{session["consortium"]} {session["datasetid"]} {session["endpoint"]}'
+        state = (f'{session["consortium"]} '
+                 f'{session["datasetid"]} '
+                 f'{session["endpoint"]} '
+                 f'{session["ct"]} '
+                 f'{session["k"]} '
+                 f'{session["min_support"]} '
+                 f'{session["max_distance"]} '
+                 f'{session["min_size"]} '
+                 f'{session["if_display"]} '
+                 f'{session["figsize_width"]} '
+                 f'{session["figsize_height"]} '
+                 f'{session["return_cellID"]} '
+                 f'{session["return_grid"]} '
+                 )
         params: dict = {"scope": "openid profile email"
                                  " urn:globus:auth:scope:transfer.api.globus.org:all"
                                  " urn:globus:auth:scope:auth.globus.org:view_identities"
@@ -110,10 +151,48 @@ def login():
         session['userid'] = user_info.get('preferred_username')
         session['datasetid'] = datasetid
         session['endpoint'] = endpoint
+        session['ct'] = ct
+        session['k'] = k
+        session['min_support'] = min_support
+        session['max_distance'] = max_distance
+        session['min_size'] = min_size
+        session['if_display'] = if_display
+        session['figsize_width'] = figsize_width
+        session['figsize_height'] = figsize_height
+        session['return_cellID'] = return_cellID
+        session['return_grid'] = return_grid
+
 
         # Redirect to the page that obtains information for the SpatialQuery/Vitessce integration.
 
         if endpoint == 'vitessce-config':
             return redirect(f'/spatialquery/vitessce-config/{datasetid}')
-        else:
-            return redirect(f'/spatialquery/{endpoint}/{datasetid}')
+        elif endpoint == 'find_fp_knn':
+            return redirect(
+                f'/spatialquery/{endpoint}/{datasetid}'
+                f'?ct={ct}'
+                f'&k={k}'
+                f'&min_support={min_support}'
+                f'&max_distance={max_distance}'
+                )
+        elif endpoint == 'find_fp_dist':
+            return redirect(
+                f'/spatialquery/{endpoint}/{datasetid}'
+                f'?ct={ct}'
+                f'&max_distance={max_distance}'
+                f'&min_size={min_size}'
+                f'&min_support={min_support}'
+                )
+        elif endpoint == 'find_patterns_grid':
+            return redirect(
+                f'/spatialquery/{endpoint}/{datasetid}'
+                f'?max_distance={max_distance}'
+                f'&min_size={min_size}'
+                f'&min_support={min_support}'
+                f'&if_display={if_display}'
+                f'&figsize=({figsize_width},{figsize_height})'
+                f'&return_cellID={return_cellID}'
+                f'&return_grid={return_grid}'
+                )
+
+
