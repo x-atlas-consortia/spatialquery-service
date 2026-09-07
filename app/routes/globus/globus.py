@@ -29,7 +29,7 @@ def globus():
         ct = request.form.get('ct')
         k = request.form.get('k')
         min_support = request.form.get('min_support')
-        max_distance = request.form.get('max_distance')
+        max_dist = request.form.get('max_dist')
         min_size = request.form.get('min_size')
         if_display = request.form.get('if_display')
         figsize_width = request.form.get('figsize_width')
@@ -38,6 +38,7 @@ def globus():
         return_grid = request.form.get('return_grid')
         n_points = request.form.get('n_points')
         seed = request.form.get('seed')
+        motifs = request.form.get('motifs')
 
 
         # Get the consortium from the request.
@@ -53,7 +54,7 @@ def globus():
         session['ct'] = ct
         session['k'] = k
         session['min_support'] = min_support
-        session['max_distance'] = max_distance
+        session['max_dist'] = max_dist
         session['min_size'] = min_size
         session['if_display'] = if_display
         session['figsize_width'] = figsize_width
@@ -62,6 +63,7 @@ def globus():
         session['return_grid'] = return_grid
         session['n_points'] = n_points
         session['seed'] = seed
+        session['motifs'] = motifs
 
 
         """

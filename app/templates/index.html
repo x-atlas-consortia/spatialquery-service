@@ -29,12 +29,13 @@
         <div>
             <label for="endpoint"><strong>SpatialQuery service endpoint path</strong></label>
             <select id="endpoint"  name="endpoint" class="form-control" style="width: 20 ch;">
-                <option value="find_fp_knn" selected>find_fp_knn</option>
+                <option value="find_fp_knn">find_fp_knn</option>
                 <option value="find_fp_dist">find_fp_dist</option>
                 <option value="find_patterns_grid">find_patterns_grid</option>
                 <option value="find_patterns_rand">find_patterns_rand</option>
                 <option value="motif_enrichment_knn">motif_enrichment_knn</option>
                 <option value="motif_enrichment_dist">motif_enrichment_dist</option>
+                <option value="de_genes" selected>de_genes (default: first identified motif)</option>
                 <option value="vitessce-config">vitessce-config</option>
             </select>
         </div>
@@ -52,8 +53,8 @@
             <input type="text" id="min_support" name="min_support" class="form-control" style="width: 20ch;" value="0.7">
         </div>
         <div>
-            <label for="max_distance">maximum distance</label>
-            <input type="text" id="max_distance" name="max_distance" class="form-control" style="width: 20ch;" value="20">
+            <label for="max_dist">maximum distance</label>
+            <input type="text" id="max_dist" name="max_dist" class="form-control" style="width: 20ch;" value="20">
         </div>
         <div>
             <label for="min_size">min_size</label>
@@ -74,7 +75,7 @@
         </div>
         <div>
             <label for="return_cellID">return cell ID</label>
-            <input type="text" id="return_cellID" name="return_cellID" class="form-control" style="width: 20ch;" value="False">
+            <input type="text" id="return_cellID" name="return_cellID" class="form-control" style="width: 20ch;" value="True">
         </div>
         <div>
             <label for="return_grid">return grid</label>
@@ -87,6 +88,10 @@
         <div>
             <label for="seed">seed (Random seed for reproducibility)</label>
             <input type="text" id="seed" name="seed" class="form-control" style="width: 20ch;" value=2023>
+        </div>
+        <div>
+            <label for="motifs">motifs to test (Comma-delimited list. None=use central cell type)</label>
+            <input type="text" id="motifs" name="motifs" class="form-control" style="width: 20ch;" value=None>
         </div>
         <div>
             <button type="submit" class="btn btn-primary btn-lg" value="Search">Call SpatialQuery endpoint</button>

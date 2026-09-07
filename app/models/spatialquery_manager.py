@@ -1,10 +1,8 @@
 """
 spatialquery_manager.py
-SpatialQuery manager class.
+SpatialQuery manager class that prepares calls to the SpatialQuery API.
 """
 import warnings
-
-import SpatialQuery
 import pandas as pd
 import numpy as np
 import anndata as ad
@@ -37,9 +35,6 @@ class SpatialQueryManager:
         :param absolute_file_path: absolute file path to a set of secondary analysis files
 
         """
-
-        spatial_key = 'X_spatial'
-        label_key = 'predicted_label'
 
         """
         The Anndata object uses arrays for data related to anndata files.
@@ -81,11 +76,10 @@ class SpatialQueryManager:
         self.label_key = ''
         label_keys = ['predicted_label','CL_label']
 
-
         found_for_label_key = False
         for k in label_keys:
             if not found_for_label_key:
-                print(f'Trying spatial_query using key {k}...')
+                print(f'Trying spatial_query using key "{k}"...')
                 try:
                     self.single_sp = spatial_query(
                         adata=self.adata,
@@ -97,10 +91,10 @@ class SpatialQueryManager:
                         feature_name=self.feature_name,
                         if_lognorm=True,
                         if_normalize_spatial_coord=True
-                    )
+                        )
+                    print(f'Initialized spatial query for key "{k}".')
                     found_for_label_key = True
                     self.label_key = k
-                    break
                 except Exception as e:
                     raise e
 
@@ -108,7 +102,7 @@ class SpatialQueryManager:
             abort(404,f'No labels corresponding to {label_keys} in {adata_path}.')
 
 
-    def find_fp_knn(self, ct: str, k: int, min_support:float, max_distance:float)->pd.DataFrame:
+    def find_fp_knn(self, ct: str, k: int, min_support:float, max_dist:float)->pd.DataFrame:
         """
         Wrapper for the find_fp_kpp function of the SpatialQuery API
         Refer to the SpatialQuery API documentation for descriptions of parameters.
@@ -118,12 +112,12 @@ class SpatialQueryManager:
             ct=ct,
             k=k,
             min_support=min_support,
-            max_dist=max_distance
+            max_dist=max_dist
         )
 
         return df_fp_knn.to_dict(orient='records')
 
-    def find_fp_dist(self, ct: str, max_distance: float, min_size: float, min_support: float) -> pd.DataFrame:
+    def find_fp_dist(self, ct: str, max_dist: float, min_size: float, min_support: float) -> pd.DataFrame:
         """
         Wrapper for the find_fp_dist function of the SpatialQuery API.
         Refer to the SpatialQuery API documentation for descriptions of parameters.
@@ -131,14 +125,14 @@ class SpatialQueryManager:
         """
         df_fp_dist = self.single_sp.find_fp_dist(
             ct= ct,
-            max_dist=max_distance,
+            max_dist=max_dist,
             min_size=min_size,
             min_support=min_support
         )
 
         return df_fp_dist.to_dict(orient='records')
 
-    def find_patterns_grid(self, max_distance:float,min_size:float,
+    def find_patterns_grid(self, max_dist:float,min_size:float,
                                            min_support:float,
                                            if_display:bool,
                                            figsize:tuple,
@@ -150,7 +144,7 @@ class SpatialQueryManager:
         """
 
         try:
-            df_fp_grid =  self.single_sp.find_patterns_grid(max_dist=max_distance,
+            df_fp_grid =  self.single_sp.find_patterns_grid(max_dist=max_dist,
                                                         min_size=min_size,
                                                         min_support=min_support,
                                                         if_display=if_display,
@@ -177,7 +171,7 @@ class SpatialQueryManager:
             abort(500, str(e))
 
     def find_patterns_rand(self,
-                           max_distance:float,
+                           max_dist:float,
                            n_points: int,
                            min_support:float,
                            min_size: float,
@@ -191,7 +185,7 @@ class SpatialQueryManager:
         """
 
         try:
-            df_fp_rand =  self.single_sp.find_patterns_rand(max_dist=max_distance,
+            df_fp_rand =  self.single_sp.find_patterns_rand(max_dist=max_dist,
                                                             n_points=n_points,
                                                             min_support=min_support,
                                                             min_size=min_size,
@@ -281,4 +275,99 @@ class SpatialQueryManager:
         config_json = vc.to_dict(base_url="http://localhost:8000")
         return config_json
 
+    def motif_enrichment_knn(self,
+                             ct: str,
+                             motifs: list[str],
+                             k: int,
+                             min_support: float,
+                             max_dist: float,
+                             return_cellID: bool)->pd.DataFrame:
+        """
+        Wrapper for the motif_enrichment_knn function of the SpatialQuery API
+        Refer to the SpatialQuery API documentation for descriptions of parameters.
 
+        """
+        df_fp_knn = self.single_sp.motif_enrichment_knn(
+            ct=ct,
+            motifs=motifs,
+            k=k,
+            min_support=min_support,
+            max_dist=max_dist,
+            return_cellID=return_cellID
+        )
+
+        """
+        If return_cellID is True, then the 'neighbor_id' and 'center_id'
+        columns will be numpy ndarrays that correspond to arrays of cell
+        indices. Convert these columns into lists.
+        """
+        if return_cellID:
+            if 'neighbor_id' in df_fp_knn.columns:
+                df_fp_knn['neighbor_id'] = df_fp_knn['neighbor_id'].apply(
+                    lambda x: x.tolist() if isinstance(x, np.ndarray) else x
+                )
+            if 'center_id' in df_fp_knn.columns:
+                df_fp_knn['center_id'] = df_fp_knn['center_id'].apply(
+                    lambda x: x.tolist() if isinstance(x, np.ndarray) else x
+                )
+
+        return df_fp_knn.to_dict(orient='records')
+
+    def motif_enrichment_dist(self,
+                              ct: str,
+                              motifs: list[str],
+                              max_dist: float,
+                              min_size: float,
+                              min_support: float,
+                              return_cellID: bool)->pd.DataFrame:
+        """
+        Wrapper for the motif_enrichment_knn function of the SpatialQuery API
+        Refer to the SpatialQuery API documentation for descriptions of parameters.
+
+        """
+        df_fp_dist = self.single_sp.motif_enrichment_dist(
+            ct=ct,
+            motifs=motifs,
+            max_dist=max_dist,
+            min_size=min_size,
+            min_support=min_support,
+            return_cellID=return_cellID
+        )
+
+        """
+        If return_cellID is True, then the 'neighbor_id' and 'center_id'
+        columns will be numpy ndarrays that correspond to arrays of cell
+        indices. Convert these columns into lists.
+        """
+        if return_cellID:
+            df_fp_dist['neighbor_id'] = df_fp_dist['neighbor_id'].apply(
+                lambda x: x.tolist() if isinstance(x, np.ndarray) else x
+            )
+            df_fp_dist['center_id'] = df_fp_dist['center_id'].apply(
+                lambda x: x.tolist() if isinstance(x, np.ndarray) else x
+            )
+
+        return df_fp_dist.to_dict(orient='records')
+
+    def de_genes(self,
+                 ind_group1:list[int],
+                 ind_group2:list[int],
+                 genes:list[str],
+                 min_fraction:float,
+                 method:str,
+                 alpha:float)->pd.DataFrame:
+        """
+        Wrapper for the de_genes function of the SpatialQuery API
+        Refer to the SpatialQuery API documentation for descriptions of parameters.
+
+        """
+        df_de_genes = self.single_sp.de_genes(
+            ind_group1=ind_group1,
+            ind_group2=ind_group2,
+            genes=genes,
+            min_fraction=min_fraction,
+            method=method,
+            alpha=alpha
+        )
+
+        return df_de_genes.to_dict(orient='records')
