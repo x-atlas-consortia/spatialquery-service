@@ -245,6 +245,10 @@ def login():
                 f'&max_dist={max_dist}'
                 f'&return_cellID={return_cellID}'
             )
+        elif endpoint == 'compute_gene_gene_correlation':
+            return redirect(
+                f'/spatialquery/{endpoint}/{datasetid}'
+            )
         else:
             abort(404,f'Endpoint {endpoint }not found'
             )

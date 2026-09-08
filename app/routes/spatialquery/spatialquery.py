@@ -6,6 +6,7 @@ Obtains inputs to be used to configure a SpatialQuery Vitessce configuration.
 """
 from flask import Blueprint, make_response, jsonify, session, request,abort
 import numpy as np
+import scanpy as sc
 
 from models.datasetwithfiles import DatasetWithFiles
 from models.spatialquery_manager import SpatialQueryManager
@@ -492,5 +493,69 @@ def get_spatialquery_de_genes(datasetid):
 
     print(f"Number of DE genes: {len(de_result)}")
     dict_response = de_result.to_dict()
+
+    return make_response(jsonify(dict_response), 200)
+
+@spatialquery_blueprint.route('/compute_gene_gene_correlation/<datasetid>', methods=['GET'])
+def get_spatialquery_compute_gene_gene_correlation(datasetid):
+
+    """
+        Obtain for the specified dataset id:
+        1. uuid
+        2. uuid for the dataset in the dataset's provenance chain that
+           has secondary analysis files
+        3. absolute file path to the secondary analysis files
+        """
+
+    print(f'Getting file information for dataset {datasetid}')
+    dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
+
+    """
+    Initialize SpatialQuery using the secondary analysis files.
+    """
+    print('Initializing SpatialQuery object')
+    spv = SpatialQueryManager(absolute_file_path=dataset_with_files.absolute_file_path)
+
+    """
+        The SpatialQueryManager object's wrapper functions (e.g., find_kp_knn)
+        call corresponding functions of the SpatialQuery object.
+        The SpatialQuery object returns dataframes; the SpatialQueryManager object
+        converts these dataframes into dicts for reponsse.
+        For the multu-step analysis that follows, use the dataframes of the SpatialQuery
+        object.
+    """
+
+    print('Obtaining highly-variable gene list')
+    adata_tmp = spv.single_sp.adata.copy()
+    sc.pp.highly_variable_genes(adata_tmp, n_top_genes=3000)
+    hvg = adata_tmp.var[adata_tmp.var['highly_variable']].index.tolist()
+
+    ct = request.args.get('ct')
+    if ct is None:
+        ct = "podocyte"
+
+    """
+    Identify frequent patterns.
+    """
+    print(f'Calling find_fp_knn for {ct}')
+    fp_knn = spv.single_sp.find_fp_knn(
+        ct=ct,
+        k=30,
+        min_support=0.5  # ,
+        # max_dist=20
+    )
+
+    motif = list(fp_knn['itemsets'][0])
+    print('Calling compute_gene_gene_correlation_by_type')
+    gene_pair_df = spv.single_sp.compute_gene_gene_correlation_by_type(
+        ct=ct,
+        motif=motif,
+        genes=hvg,  # specify genes to compute gene-gene correlation, or use all genes by setting genes=None
+        max_dist=10,  # define neighborhood size with radius-based neighborhood, or specify k for knn-based neighborhood
+    )
+
+    gene_pair_df = gene_pair_df[gene_pair_df['if_significant']]
+
+    dict_response = gene_pair_df.to_dict()
 
     return make_response(jsonify(dict_response), 200)
