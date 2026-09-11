@@ -92,17 +92,32 @@ The application:
 9. Clone this repo.
 10. Create a Python virtual environment.
 11. Install the packages in **requirements.txt**.
+12. If PyCharm is the Python IDE, optionally set up a run configuration that runs the **app.py** script.
+12. Start the application.
+13. Open http://127.0.0.1:5000 to launch the prototype home page (index.html).
+14. In the home page, select an endpoint from the "SpatialQuery service endpoint path" list.
+15. Optionally edit values of parameters or accept defaults.
+15. Click the "Call SpatialQuery endpoint" button.
 
 # Service endpoints
 
 #### Note on parameters
 In the prototype application, all parameters are
-passed to endpoints via session variables.
+passed from the home page to endpoints via session variables. This is 
+required for Globus authentication. However, the endpoint routes assume that 
+parameters are either in the path (the dataset id)
+or in the request (i.e., are query parameters).
 
 ## /globus, /auth
-These endpoints handle authentication to Globus. 
-The endpoints work in tandem, and in fact redirect to each other in a loop until the user
-is authenticated. Once the user has been authenticated, the /auth endpoint redirects to the /get_spqv route.
+These endpoints handle authentication to Globus for the prototype application. A production
+version would likely use a standard authentication architecture.
+
+The endpoints demonstrate how to authenticate to both HuBMAP and SenNet Globus environments via a
+"consortium" parameter.
+
+The endpoints work in tandem. They redirect to each other in a loop until the user
+is authenticated. 
+Once the user has been authenticated, the /auth endpoint redirects to the endpoint specified by the home page.
 
 ## relevant SpatialQuery endpoints
 
