@@ -25,22 +25,25 @@ The prototype use case for SpatialQuery service in the HuBMAP Data Portal is the
 
 ## Inputs
 + The end user selects a spatially resolved dataset from the Data Portal.
-+ The end user specifies a cell type of interest (or “central cell type”) that the FOV analysis uses as an “anchor” for motif enrichment.
++ Via the UI, the user specifies parameters for SpatialQuery, including:
+  + a cell type of interest (or “central cell type”) that the FOV analysis uses as an “anchor” for motif enrichment
+  + relevant analysis parameters--e.g., the number of nearest neighbors (_k_). Consult the [SpatialQuery API](https://spatialquery.readthedocs.io/en/latest/api/single_data.html) documentation for descriptions of analysis parameters.
 
 ## Outputs
-The Data Portal displays a separate Vitessce visualization of the SpatialQuery FOV results for the selected dataset and cell type.
+JSON results of SpatialQuery analysis.
 
 ---
 # SpatialQuery Service integration
 The SpatialQuery service will support integration with 
 * the appropriate environment (HuBMAP or SenNet) API endpoints (i.e., in entity-api, uuid-api, ingest-api, etc.)
 * SpatialQuery API endpoints
-* calls to the SpatialQuery Vitessce Widget
+* ~calls to the SpatialQuery Vitessce Widget~
 
 The service will reside in a component that is common to both the HuBMAP and SenNet environments.
 
 # Service architecture
-The SpatialQuery service will be a Flask application that manages calls to the various services and APIs.
+1. The SpatialQuery service will be a Flask application that manages calls to the various services and APIs.
+2. The service will have direct access to the PSC file system in which secondary analysis files are stored.
 
 # Service requirements
 1. The service will use the environment-appropriate api to obtain the UUID of spatially resolved datasets.
@@ -48,7 +51,7 @@ The SpatialQuery service will be a Flask application that manages calls to the v
 
 # PROTOTYPES
 
-## Jupyter notebook
+## 1. Jupyter notebook
 
 A prototype using the SpatialQuery API is available as a Jupyter Notebook in a HuBMAP Workspace. 
 
@@ -60,18 +63,21 @@ To launch the workspace,
 
 The notebook is related to [Tutorial 1](https://spatialquery.readthedocs.io/en/latest/tutorials/tutorial_1.html) in the SpatialQuery documentation site.
 
-## Python prototype application
-The _app_ directory of this repository contains a Web application that performs Single FOV analysis on a dataset and 
-provides a JSON of Vitessce widget information.
+## 2. Python prototype application
+The _app_ directory of this repository contains a Web application that performs Single FOV analysis on a dataset.
 
 The application:
-1. Displays a web page with a form that allows the user the specify the consortium, dataset id, and cell type to use as anchor motif.
+1. Displays a web page with a form that allows the user the specify 
+    * consortium
+    * dataset id
+    * SpatialQuery analysis parameters
+    * back end endpoint
 2. Authenticates to the appropriate Globus consortium.
 3. Loads H5AD and Zarr files for the dataset from a local store.
 4. Performs Single FOV analysis on the specified dataset.
-5. Returns Vitessce Widget information as a JSON response.
+5. Returns JSON responses to endpoints.
 
-### Setup on a local machine
+### Setting up on a local machine
 1. Create a folder to contain the **app.cfg** and local Anndata and Zarr files. There are three possible locations:
    * Bare metal: in a subdirectory named **spatial-query** of the user root (e.g., the resolution of "~" in MacOs) 
    * Docker: in the path _/usr/src/app_  of the volume mount
@@ -87,7 +93,6 @@ The application:
 10. Create a Python virtual environment.
 11. Install the packages in **requirements.txt**.
 
-
 # Service endpoints
 
 #### Note on parameters
@@ -99,10 +104,15 @@ These endpoints handle authentication to Globus.
 The endpoints work in tandem, and in fact redirect to each other in a loop until the user
 is authenticated. Once the user has been authenticated, the /auth endpoint redirects to the /get_spqv route.
 
-## /vitessce-config
-Reads secondary analysis files related to a spatially-resolved dataset and returns a Vitessce configuration.
+## relevant SpatialQuery endpoints
 
-### Workflow
+Reads secondary analysis files related to a spatially-resolved dataset and performs single FOV analysis.
+### /find_fp_knn
+### /find_fp_dist
+### /motif_enrichment_knn
+### /motif_enrichment_dist
+
+### Workflow for all SpatialQuery endpoints
 ##### 1. Identify the dataset's descendant with files
 In general, a specified dataset is part of a provenance chain of datasets. 
 To identify the set of secondary analysis files to use for Vitessce, the application
@@ -118,28 +128,9 @@ It is necessary to:
 
 The prototype application reads these files from the proveanance file system (PSC) and manages them in the _SpatialQueryVitessce_ class (**spatialqueryvitessce_manager.py**).
 
-##### 2. Initialize SpatialQuery Single FOV analysis
+##### 3. Initialize SpatialQuery Single FOV analysis
 The prototype application encapsulates integration with SpatialQuery using the _SpatialQueryVitessce_ class (**spatialquery_vitessce.py**).
 
 The **init** function of the __SpatialQueryVitessce_ class initializes SpatialQuery.
 
-The **find_fp_knn** function of the class is an example of how to wrap calls to the SpatialQuery API. This function is not
-needed for Vitessce integration.
-
-##### 3. Initialize Vitessce SpatialQuery plugin
-The _SpatialQueryVitessceManager_ class initializes the SpatialQuery Vitessce plugin.
-
-##### 4. Configure Vitessce with dataset and views of interest. 
-The **get_vitessce_widget** function of the _SpatialQueryVitessceManager_ class works with secondary analysis data 
-to populate a Vitessce Widget with information from the SpatialQuery plugin.
-
-##### 5. Render the Vitessce widget and pass the SpatialQueryPlugin instance.
-The prototype application returns the Vitessce configuration as a JSON.
-
-### response
-* 200 -a JSON that includes the Vitessce configuration information.
-* Exception handling may include:
-  * Passing along errors from SpatialQuery
-  * 404 errors relating to invalid UUID or cell type
-  * Passing along errors from Vitessce plugin
-
+##### 4. Execute specified endpoint

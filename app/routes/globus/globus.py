@@ -1,5 +1,5 @@
 """
-Index route that:
+Prototype application index route that:
 1. obtains Globus environment, dataset id, and SpatialQuery API parameters from a form
 2. authenticates to Globus
 """
@@ -24,7 +24,12 @@ def globus():
         # service endpoint path
         endpoint = request.form.get('endpoint')
 
-        # SpatialQuery parameters
+        """
+        SpatialQuery parameters. These are used in all endpoints.
+        The production web page would likely not pass all of them for 
+        each type of call.
+        """
+
         datasetid = request.form.get('datasetid')
         ct = request.form.get('ct')
         k = request.form.get('k')
@@ -41,10 +46,19 @@ def globus():
         motifs = request.form.get('motifs')
 
 
-        # Get the consortium from the request.
+        """
+        Obtain the consortium from the request.
+        The assumption is that SpatialQuery integration will be a 
+        feature of both HuBMAP and SenNet.
+        """
+
         if consortium.upper() not in ['HUBMAP', 'SENNET']:
             return make_response(f'Invalid consortium: {consortium}', 400)
         consortium = consortium.upper()
+
+        """
+        Pass everything to the authentication route via the session.
+        """
 
         session['consortium'] = f'CONTEXT_{consortium}'
         session['datasetid'] = datasetid
@@ -68,14 +82,10 @@ def globus():
 
         """
         Authenticate to Globus via the login route.
-        If login is successful, Globus will redirect to the edit page.
+        If login is successful, Globus will redirect to an endpoint route.
         """
-        #Indicate the workflow (edit, export, doi) to the Globus auth.
-        #session['workflow'] = 'get_uuids'
 
-        # Authenticate to Globus via the login route.
-        # If login is successful, Globus will redirect to the get-uuids page.
         return redirect(f'/login')
 
-    # Render the Globus login form.
+    # Render the prototype application home page.
     return render_template('index.html')

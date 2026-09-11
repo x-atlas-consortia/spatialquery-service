@@ -175,7 +175,15 @@ def login():
         session['motifs'] = motifs
 
 
-        # Redirect to the page that obtains information for the SpatialQuery/Vitessce integration.
+        """
+        Redirect to the specified endpoint.
+        
+        Endpoints to implement in production:
+        /find_fp_knn
+        /find_fp_dist
+        /motif_enrichment_knn
+        /motif_enrichment_dist
+        """
 
         if endpoint == 'vitessce-config':
             return redirect(f'/spatialquery/vitessce-config/{datasetid}')
@@ -195,6 +203,26 @@ def login():
                 f'&min_size={min_size}'
                 f'&min_support={min_support}'
                 )
+        elif endpoint == 'motif_enrichment_knn':
+            return redirect(
+                f'/spatialquery/{endpoint}/{datasetid}'
+                f'?ct={ct}'
+                f'&motifs={motifs}'
+                f'&k={k}'
+                f'&min_support={min_support}'
+                f'&max_dist={max_dist}'
+                f'&return_cellID={return_cellID}'
+            )
+        elif endpoint == 'motif_enrichment_dist':
+            return redirect(
+                f'/spatialquery/{endpoint}/{datasetid}'
+                f'?ct={ct}'
+                f'&motifs={motifs}'
+                f'&max_dist={max_dist}'
+                f'&min_size={min_size}'
+                f'&min_support={min_support}'
+                f'&return_cellID={return_cellID}'
+            )
         elif endpoint == 'find_patterns_grid':
             return redirect(
                 f'/spatialquery/{endpoint}/{datasetid}'
@@ -217,26 +245,6 @@ def login():
                 f'&figsize=({figsize_width},{figsize_height})'
                 f'&return_cellID={return_cellID}'
                 f'&seed={seed}'
-            )
-        elif endpoint == 'motif_enrichment_knn':
-            return redirect(
-                f'/spatialquery/{endpoint}/{datasetid}'
-                f'?ct={ct}'
-                f'&motifs={motifs}'
-                f'&k={k}'
-                f'&min_support={min_support}'
-                f'&max_dist={max_dist}'
-                f'&return_cellID={return_cellID}'
-            )
-        elif endpoint == 'motif_enrichment_dist':
-            return redirect(
-                f'/spatialquery/{endpoint}/{datasetid}'
-                f'?ct={ct}'
-                f'&motifs={motifs}'
-                f'&max_dist={max_dist}'
-                f'&min_size={min_size}'
-                f'&min_support={min_support}'
-                f'&return_cellID={return_cellID}'
             )
         elif endpoint == 'de_genes':
             return redirect(
