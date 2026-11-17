@@ -27,21 +27,21 @@ of the entity-api.
 
 """
 
-from flask import abort, session
+from flask import abort
 import requests
-
-# Helper classes
-from .apihelper import ApiHelper
-# Represents the app.cfg file
-from .appconfig import AppConfig
+# Derived datasets must come from one of these assay families (matched as a prefix of dataset_type,
+# e.g. "Slide-seq [Salmon]"). Extend this list as more spatial assays get secondary analysis files.
+SPATIAL_DATASET_TYPES = ['Slide-seq', 'Visium', 'Xenium', 'MERFISH', 'CODEX', 'PhenoCycler', 'MIBI', 'CellDIVE']
 
 class DatasetWithFiles:
 
-    def __init__(self, dataset_id:str):
+    def __init__(self, dataset_id: str, entity_url: str, ingest_url: str, headers: dict):
 
         """
         :param dataset_id: consortium ID of a dataset.
-
+        :param entity_url: full base URL of the entity-api (no trailing slash)
+        :param ingest_url: full base URL of the ingest-api (no trailing slash)
+        :param headers: request headers used in API calls (includes Authorization)
         """
 
         # consortium id
@@ -53,26 +53,14 @@ class DatasetWithFiles:
         # label_key used in SpatialQuery initialization
         self.label_key = ''
 
-        # Build consortium-specific API headers.
-        apihelper = ApiHelper()
-        # translated consortium string used in API calls
-        self.consortium = apihelper.consortium
-        # request headers used in API calls
-        self.headers = apihelper.headers
-
-        """
-        The url base for API calls depends on the configuration:
-        1. Consortium (HuBMAP or SenNet)
-        2. Environment (development or production)
-        
-        """
-        self.cfg = AppConfig()
-        # Assumes use of entity-api. Change if using uuid-api.
-        self.urlbase = self.cfg.getfield(key='ENTITY_BASE_URL')
+        # Values passed in by the caller instead of read from the session or config.
+        self.entity_url = entity_url
+        self.ingest_url = ingest_url
+        self.headers = headers
 
         # Get the entity for the specified dataset.
         self.dataset_entity = self._get_dataset_entity(dataset_id=dataset_id)
-        self.dataset_uuid = self.dataset.get('uuid')
+        self.dataset_uuid = self.dataset_entity.get('uuid')
 
         # Search for files in the dataset's provenance chain.
         self._get_files()
@@ -82,7 +70,7 @@ class DatasetWithFiles:
         Obtains the entity object for a dataset.
         :param dataset_id: ID of a dataset
         """
-        url = f'{self.urlbase}.{self.consortium}.org/entities/{dataset_id}'
+        url = f'{self.entity_url}/entities/{dataset_id}'
         response = requests.get(url=url, headers=self.headers)
 
         if response.status_code == 200:
@@ -94,21 +82,17 @@ class DatasetWithFiles:
                 is common for a user to provide the consortium ID for 
                 an entity other than the dataset--e.g., for a sample.
                 """
-                abort(400,f'The entity with ID {dataset_id} is not a dataset in {self.consortium}.')
-
-            self.dataset = rjson
+                abort(400, f'The entity with ID {dataset_id} is not a dataset.')
 
             return rjson
 
         elif response.status_code == 404:
-            abort(404, f'No dataset with id {dataset_id} found in provenance for {self.consortium} '
-                       f'in environment {self.urlbase}')
+            abort(404, f'No dataset with id {dataset_id} found.')
         elif response.status_code == 400:
             err = response.json().get('error')
             if 'is not a valid id format' in err:
                 # Translate this as a 404, not a 400.
-                abort(404, f'No dataset with id {dataset_id} found in provenance for {self.consortium} '
-                           f'in environment {self.urlbase}')
+                abort(404, f'No dataset with id {dataset_id} found.')
             else:
                 abort(response.status_code, response.json().get('error'))
         else:
@@ -126,6 +110,8 @@ class DatasetWithFiles:
         if files is not None and len(files) > 0:
             # Files are linked to the specified dataset.
             self.files = files
+            self.file_uuid = self.dataset_uuid
+            self.absolute_file_path = self._get_absolute_file_path(dataset_uuid=self.file_uuid)
         else:
 
             """
@@ -137,7 +123,7 @@ class DatasetWithFiles:
             """
 
             # Get a subset of descendant information.
-            url_descendants = f'{self.urlbase}.{self.consortium}.org/descendants-info/{self.dataset_uuid}?include=uuid,status,entity_type,last_modified_timestamp,files'
+            url_descendants = f'{self.entity_url}/descendants-info/{self.dataset_uuid}?include=uuid,status,entity_type,dataset_type,last_modified_timestamp,files'
             response = requests.get(url=url_descendants, headers=self.headers)
 
             if response.status_code == 200:
@@ -160,9 +146,13 @@ class DatasetWithFiles:
 
                             if timestamp >= descendant_timestamp:
                                 files = d.get('files')
+                                
+                                dataset_type = d.get('dataset_type', '')
+                                is_spatial = any(dataset_type.startswith(t) for t in SPATIAL_DATASET_TYPES)
 
-                                if files is not None:
+                                if is_spatial and files and any(f.get('rel_path') == 'secondary_analysis.h5ad' for f in files):
                                     file_entity = d
+                                    descendant_timestamp = timestamp
 
 
                 if file_entity == {}:
@@ -188,11 +178,7 @@ class DatasetWithFiles:
         :param dataset_uuid: uuid for dataset
         """
 
-        # The url base depends on both the consortium and the environment (i.e., development vs production).
-        self.cfg = AppConfig()
-        self.urlbase = self.cfg.getfield(key='INGEST_BASE_URL')
-
-        url = f'{self.urlbase}.{self.consortium}.org/datasets/{dataset_uuid}/file-system-abs-path'
+        url = f'{self.ingest_url}/datasets/{dataset_uuid}/file-system-abs-path'
         response = requests.get(url=url, headers=self.headers)
 
         if response.status_code == 200:
@@ -200,14 +186,12 @@ class DatasetWithFiles:
             return rjson.get('path')
 
         elif response.status_code == 404:
-            abort(404, f'No absolute file path for dataset with id {dataset_uuid} found in provenance for {self.consortium} '
-                       f'in environment {self.urlbase}')
+            abort(404, f'No absolute file path found for dataset {dataset_uuid}.')
         elif response.status_code == 400:
             err = response.json().get('error')
             if 'is not a valid id format' in err:
                 # Translate this as a 404, not a 400.
-                abort(404, f'No absolute file path for dataset with id {dataset_uuid} found in provenance for {self.consortium} '
-                           f'in environment {self.urlbase}')
+                abort(404, f'No absolute file path found for dataset {dataset_uuid}.')
             else:
                 abort(response.status_code, response.json().get('error'))
         else:

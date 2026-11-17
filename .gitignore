@@ -23,3 +23,7 @@ BUILD
 **/dist
 
 /.secrets
+
+.venv/
+
+docker/spatialquery-service/app/

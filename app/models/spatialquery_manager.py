@@ -3,11 +3,18 @@ spatialquery_manager.py
 SpatialQuery manager class that prepares calls to the SpatialQuery API.
 """
 import warnings
+import logging
 import pandas as pd
 import numpy as np
 import anndata as ad
+"""
+ZARR IMPORTS DISABLED
+Only get_vitessce_widget() (not in the initial release) uses these.
+Restore them if that route returns.
+
 import zarr
 from zarr.storage import LocalStore
+"""
 from flask import abort
 import os
 
@@ -18,6 +25,11 @@ Vitessce imports will only be necessary if the /vitessce-config
 endpoint is implemented.
 """
 
+"""
+VITESSCE IMPORTS DISABLED
+Only get_vitessce_widget() (the /vitessce-config route, not in the initial release) uses these.
+Restore them if that route returns.
+
 from vitessce import (
     VitessceConfig,
     AnnDataWrapper,
@@ -26,6 +38,9 @@ from vitessce import (
     CoordinationLevel as CL,
 )
 from vitessce.widget_plugins import SpatialQueryPlugin
+"""
+
+logger = logging.getLogger(__name__)
 
 # Pandas configuration
 warnings.filterwarnings("ignore")
@@ -48,28 +63,26 @@ class SpatialQueryManager:
         one file.
         """
 
-        print('Loading secondary analysis data')
+        logger.info('Loading secondary analysis data')
 
-        # Development: emulate PSC file system on local machine.
-        print('DEV EMULATION OF FILE SYSTEM WITH HARD-CODED absolute file path')
-        print('IN PRODUCTION, SET adata_path TO PATH IN PSC FILE SYSTEM')
-        adata_path = '/Users/jas971/spatial-query/secondary_analysis.h5ad'
+        # Absolute file path in the PSC file system, supplied by ingest-api via DatasetWithFiles.
+        adata_path = f'{absolute_file_path}/secondary_analysis.h5ad'
 
-        # Production: absolute file path in PSC environment.
-        #adata_path = f'{absolute_file_path}/secondary_analysis.h5ad'
         if not os.path.exists(adata_path):
             abort(404,f'The secondary_analysis.h5ad file was not found in path {adata_path} in the file system.')
         self.adata = ad.read_h5ad(adata_path)
 
-        # Development: emulate PSC file system on local machine.
-        print('DEV EMULATION OF FILE SYSTEM WITH HARD-CODED absolute file path')
-        print('IN PRODUCTION, SET zarr_paths TO PATH IN PSC FILE SYSTEM')
-        self.zarr_paths = '/Users/jas971/spatial-query/secondary_analysis.zarr'
+        """
+        ZARR CHECK DISABLED
+        Only the /vitessce-config route (not in the initial release) reads the zarr.
+        Re-enable if that route returns, and verify the path first: the entity metadata
+        lists it under hubmap_ui/anndata-zarr/, while the Globus view showed it at the
+        top level.
 
-        # Production: absolute file path in PSC environment.
-        # self.zarr_paths = f'{absolute_file_path}/secondary_analysis.zarr'
+        self.zarr_paths = f'{absolute_file_path}/secondary_analysis.zarr'
         if not os.path.isdir(self.zarr_paths):
-            abort(404,f'The secondary_analysis.zarr directory was not found in path {self.zarr_paths} in the file system.')
+            abort(404, f'The secondary_analysis.zarr directory was not found in path {self.zarr_paths} in the file system.')
+        """
 
         """
         Initialization parameters:
@@ -89,7 +102,7 @@ class SpatialQueryManager:
         found_for_label_key = False
         for k in label_keys:
             if not found_for_label_key:
-                print(f'Trying spatial_query using key "{k}"...')
+                logger.info(f'Trying spatial_query using key "{k}"...')
                 try:
                     self.single_sp = spatial_query(
                         adata=self.adata,
@@ -102,7 +115,7 @@ class SpatialQueryManager:
                         if_lognorm=True,
                         if_normalize_spatial_coord=True
                         )
-                    print(f'Initialized spatial query for key "{k}".')
+                    logger.info(f'Initialized spatial query for key "{k}".')
                     found_for_label_key = True
                     self.label_key = k
                 except Exception as e:
@@ -117,7 +130,8 @@ class SpatialQueryManager:
                     necessary to interrogate the object--i.e.., check 
                     a property.
                     """
-                    raise e
+                    logger.warning(f'Initializing spatial_query with key "{k}" failed: {e}')
+                    continue
 
         if not found_for_label_key:
             abort(404,f'No labels corresponding to {label_keys} in {adata_path}.')
@@ -218,194 +232,207 @@ class SpatialQueryManager:
         indices. Convert these columns into lists.
         """
         if return_cellID:
-            df_fp_dist['neighbor_id'] = df_fp_dist['neighbor_id'].apply(
-                lambda x: x.tolist() if isinstance(x, np.ndarray) else x
-            )
-            df_fp_dist['center_id'] = df_fp_dist['center_id'].apply(
-                lambda x: x.tolist() if isinstance(x, np.ndarray) else x
-            )
+            if 'neighbor_id' in df_fp_dist.columns:
+                df_fp_dist['neighbor_id'] = df_fp_dist['neighbor_id'].apply(
+                    lambda x: x.tolist() if isinstance(x, np.ndarray) else x
+                )
+            if 'center_id' in df_fp_dist.columns:
+                df_fp_dist['center_id'] = df_fp_dist['center_id'].apply(
+                    lambda x: x.tolist() if isinstance(x, np.ndarray) else x
+                )
 
         return df_fp_dist.to_dict(orient='records')
 
+    """
+    DISABLED: used only by the /find_patterns_grid route (not in the initial release).
+    """
+    # def find_patterns_grid(self, max_dist:float,min_size:float,
+    #                                        min_support:float,
+    #                                        if_display:bool,
+    #                                        figsize:tuple,
+    #                                        return_cellID:bool,
+    #                                        return_grid:bool) -> pd.DataFrame:
+    #     """
+    #     Wrapper for the find_patterns_grid function of the SpatialQuery API.
+    #     Refer to the SpatialQuery API documentation for descriptions of parameters.
+    #     """
 
-    def find_patterns_grid(self, max_dist:float,min_size:float,
-                                           min_support:float,
-                                           if_display:bool,
-                                           figsize:tuple,
-                                           return_cellID:bool,
-                                           return_grid:bool) -> pd.DataFrame:
-        """
-        Wrapper for the find_patterns_grid function of the SpatialQuery API.
-        Refer to the SpatialQuery API documentation for descriptions of parameters.
-        """
+    #     """
+    #     This failed with an exception in development. Error message:
+    #     Cannot create a GUI FigureManager outside the main thread using the MacOS backend. Use a non-interactive backend like 'agg' to make plots on worker threads.
+    #     """
+    #     try:
+    #         df_fp_grid =  self.single_sp.find_patterns_grid(max_dist=max_dist,
+    #                                                     min_size=min_size,
+    #                                                     min_support=min_support,
+    #                                                     if_display=if_display,
+    #                                                     figsize=figsize,
+    #                                                     return_cellID=return_cellID,
+    #                                                     return_grid=return_grid)
+    #         if return_grid:
+    #             # Return the DataFrame.
+    #             return df_fp_grid.to_dict(orient='records')
+    #         else:
+    #             """
+    #             1. Extract the DataFrame and the np.ndarray from the tuple response.
+    #             2. Convert the DataFrame component (first element) to dict.
+    #             3. Convert the np.ndarray (second element) to dict.
+    #             4. Concatenate the dicts.
+    #             """
 
-        """
-        This failed with an exception in development. Error message:
-        Cannot create a GUI FigureManager outside the main thread using the MacOS backend. Use a non-interactive backend like 'agg' to make plots on worker threads.
-        """
-        try:
-            df_fp_grid =  self.single_sp.find_patterns_grid(max_dist=max_dist,
-                                                        min_size=min_size,
-                                                        min_support=min_support,
-                                                        if_display=if_display,
-                                                        figsize=figsize,
-                                                        return_cellID=return_cellID,
-                                                        return_grid=return_grid)
-            if return_grid:
-                # Return the DataFrame.
-                return df_fp_grid.to_dict(orient='records')
-            else:
-                """
-                1. Extract the DataFrame and the np.ndarray from the tuple response.
-                2. Convert the DataFrame component (first element) to dict.
-                3. Convert the np.ndarray (second element) to dict.
-                4. Concatenate the dicts.
-                """
+    #             return df_fp_grid.to_dict(orient='records')
 
-                return df_fp_grid.to_dict(orient='records')
+    #     except RuntimeError as e:
+    #         """
+    #         Issue: find_patterns_grid currently uses an interactive plotter.
+    #         Error message is:
+    #         Cannot create a GUI FigureManager outside the main thread using the MacOS backend. Use a non-interactive backend like 'agg' to make plots on worker threads.
+    #         """
 
-        except RuntimeError as e:
-            """
-            Issue: find_patterns_grid currently uses an interactive plotter.
-            Error message is:
-            Cannot create a GUI FigureManager outside the main thread using the MacOS backend. Use a non-interactive backend like 'agg' to make plots on worker threads.
-            """
+    #         abort(500, str(e))
+    """
+    DISABLED: used only by the /find_patterns_rand route (not in the initial release).
+    """
+    # def find_patterns_rand(self,
+    #                        max_dist:float,
+    #                        n_points: int,
+    #                        min_support:float,
+    #                        min_size: float,
+    #                        if_display:bool,
+    #                        figsize:tuple,
+    #                        return_cellID:bool,
+    #                        seed:int) -> pd.DataFrame:
+    #     """
+    #     Wrapper for the find_patterns_rand function of the SpatialQuery API.
+    #     Refer to the SpatialQuery API documentation for descriptions of parameters.
+    #     """
 
-            abort(500, str(e))
+    #     """
+    #     This failed with an exception in development. Error message:
+    #     Cannot create a GUI FigureManager outside the main thread using the MacOS backend. Use a non-interactive backend like 'agg' to make plots on worker threads.
+    #     """
+    #     try:
+    #         df_fp_rand =  self.single_sp.find_patterns_rand(max_dist=max_dist,
+    #                                                         n_points=n_points,
+    #                                                         min_support=min_support,
+    #                                                         min_size=min_size,
+    #                                                         if_display=if_display,
+    #                                                         figsize=figsize,
+    #                                                         return_cellID=return_cellID,
+    #                                                         seed=seed)
+    #         return df_fp_rand.to_dict(orient='records')
 
-    def find_patterns_rand(self,
-                           max_dist:float,
-                           n_points: int,
-                           min_support:float,
-                           min_size: float,
-                           if_display:bool,
-                           figsize:tuple,
-                           return_cellID:bool,
-                           seed:int) -> pd.DataFrame:
-        """
-        Wrapper for the find_patterns_rand function of the SpatialQuery API.
-        Refer to the SpatialQuery API documentation for descriptions of parameters.
-        """
+    #     except RuntimeError as e:
+    #         """
+    #         Issue: find_patterns_grid currently uses an interactive plotter.
+    #         Error message is:
+    #         Cannot create a GUI FigureManager outside the main thread using the MacOS backend. Use a non-interactive backend like 'agg' to make plots on worker threads.
+    #         """
 
-        """
-        This failed with an exception in development. Error message:
-        Cannot create a GUI FigureManager outside the main thread using the MacOS backend. Use a non-interactive backend like 'agg' to make plots on worker threads.
-        """
-        try:
-            df_fp_rand =  self.single_sp.find_patterns_rand(max_dist=max_dist,
-                                                            n_points=n_points,
-                                                            min_support=min_support,
-                                                            min_size=min_size,
-                                                            if_display=if_display,
-                                                            figsize=figsize,
-                                                            return_cellID=return_cellID,
-                                                            seed=seed)
-            return df_fp_rand.to_dict(orient='records')
+    #         abort(500, str(e))
 
-        except RuntimeError as e:
-            """
-            Issue: find_patterns_grid currently uses an interactive plotter.
-            Error message is:
-            Cannot create a GUI FigureManager outside the main thread using the MacOS backend. Use a non-interactive backend like 'agg' to make plots on worker threads.
-            """
+    """
+    VITESSCE WIDGET DISABLED
+    Used only by the /vitessce-config route (not in the initial release).
+    Restore it together with the Vitessce and zarr imports and the zarr check.
+    """
+    # def get_vitessce_widget(self):
+    #     """
+    #     Does the following:
+    #     1. Initializes a SpatialQuery Vitessce plugin
+    #     2. Configures Vitessce
+    #     3. Initializes a SpatialQuery Vitessce widget
+    #     4. Passes the plugin to the widget
+    #     :return: SpatialQuery Vitessce widget object
 
-            abort(500, str(e))
+    #     """
 
-    def get_vitessce_widget(self):
-        """
-        Does the following:
-        1. Initializes a SpatialQuery Vitessce plugin
-        2. Configures Vitessce
-        3. Initializes a SpatialQuery Vitessce widget
-        4. Passes the plugin to the widget
-        :return: SpatialQuery Vitessce widget object
+    #     print('Initializing SpatialQuery Vitessce plugin')
+    #     plugin = SpatialQueryPlugin(self.adata,
+    #                                      spatial_key=self.spatial_key,
+    #                                      label_key=self.label_key,
+    #                                      feature_name=self.feature_name)
 
-        """
+    #     vc = VitessceConfig(schema_version="1.0.16", name="Spatial-Query")
 
-        print('Initializing SpatialQuery Vitessce plugin')
-        plugin = SpatialQueryPlugin(self.adata,
-                                         spatial_key=self.spatial_key,
-                                         label_key=self.label_key,
-                                         feature_name=self.feature_name)
-
-        vc = VitessceConfig(schema_version="1.0.16", name="Spatial-Query")
-
-        """
-        Dev note: the original notebook code called the function with 
-        adata_store=zarr.DirectoryStore(adata_zarr_paths[0]).
-        DirectoryStore is no longer an attribute of zarr. 
-        Based on a discussion in the zarr repo, I changed to 
-        zarr.storage.LocalStore, which worked in the local environment.
+    #     """
+    #     Dev note: the original notebook code called the function with 
+    #     adata_store=zarr.DirectoryStore(adata_zarr_paths[0]).
+    #     DirectoryStore is no longer an attribute of zarr. 
+    #     Based on a discussion in the zarr repo, I changed to 
+    #     zarr.storage.LocalStore, which worked in the local environment.
         
-        Aside from the change to zarr.DirectoryStore, the following 
-        is black box code from the sample notebook. Consult the 
-        SpatialQuery development team if there are questions.
-        """
+    #     Aside from the change to zarr.DirectoryStore, the following 
+    #     is black box code from the sample notebook. Consult the 
+    #     SpatialQuery development team if there are questions.
+    #     """
 
-        dataset = vc.add_dataset("Query results").add_object(AnnDataWrapper(
-            adata_store=zarr.storage.LocalStore(self.zarr_paths),
-            obs_feature_matrix_path="X",
-            obs_set_paths=[f"obs/{self.label_key}"],
-            obs_set_names=["Cell Type"],
-            obs_spots_path=f"obsm/{self.spatial_key}",
-            feature_labels_path="var/hugo_symbol",
-            coordination_values={
-                "featureLabelsType": "Gene symbol",
-            }
-        ))
+    #     dataset = vc.add_dataset("Query results").add_object(AnnDataWrapper(
+    #         adata_store=zarr.storage.LocalStore(self.zarr_paths),
+    #         obs_feature_matrix_path="X",
+    #         obs_set_paths=[f"obs/{self.label_key}"],
+    #         obs_set_names=["Cell Type"],
+    #         obs_spots_path=f"obsm/{self.spatial_key}",
+    #         feature_labels_path="var/hugo_symbol",
+    #         coordination_values={
+    #             "featureLabelsType": "Gene symbol",
+    #         }
+    #     ))
 
-        spatial_view = vc.add_view("spatialBeta", dataset=dataset)
-        lc_view = vc.add_view("layerControllerBeta", dataset=dataset)
-        sets_view = vc.add_view("obsSets", dataset=dataset)
-        features_view = vc.add_view("featureList", dataset=dataset)
-        sq_view = vc.add_view("spatialQuery", dataset=dataset)
+    #     spatial_view = vc.add_view("spatialBeta", dataset=dataset)
+    #     lc_view = vc.add_view("layerControllerBeta", dataset=dataset)
+    #     sets_view = vc.add_view("obsSets", dataset=dataset)
+    #     features_view = vc.add_view("featureList", dataset=dataset)
+    #     sq_view = vc.add_view("spatialQuery", dataset=dataset)
 
-        obs_set_selection_scope, = vc.add_coordination("obsSetSelection", )
-        obs_set_selection_scope.set_value(None)
+    #     obs_set_selection_scope, = vc.add_coordination("obsSetSelection", )
+    #     obs_set_selection_scope.set_value(None)
 
-        sets_view.use_coordination(obs_set_selection_scope)
-        sq_view.use_coordination(obs_set_selection_scope)
-        spatial_view.use_coordination(obs_set_selection_scope)
-        features_view.use_coordination(obs_set_selection_scope)
+    #     sets_view.use_coordination(obs_set_selection_scope)
+    #     sq_view.use_coordination(obs_set_selection_scope)
+    #     spatial_view.use_coordination(obs_set_selection_scope)
+    #     features_view.use_coordination(obs_set_selection_scope)
 
-        vc.link_views([spatial_view, lc_view, sets_view, features_view],
-                      ["additionalObsSets", "obsSetColor"],
-                      [plugin.additional_obs_sets, plugin.obs_set_color]
-                      )
-        vc.link_views_by_dict([spatial_view, lc_view], {
-            "spotLayer": CL([
-                {
-                    "obsType": "cell",
-                    "spatialSpotRadius": 15,
-                },
-            ])
-        })
+    #     vc.link_views([spatial_view, lc_view, sets_view, features_view],
+    #                   ["additionalObsSets", "obsSetColor"],
+    #                   [plugin.additional_obs_sets, plugin.obs_set_color]
+    #                   )
+    #     vc.link_views_by_dict([spatial_view, lc_view], {
+    #         "spotLayer": CL([
+    #             {
+    #                 "obsType": "cell",
+    #                 "spatialSpotRadius": 15,
+    #             },
+    #         ])
+    #     })
 
-        vc.layout((spatial_view | (lc_view / features_view)) / (sets_view | sq_view))
+    #     vc.layout((spatial_view | (lc_view / features_view)) / (sets_view | sq_view))
 
-        config_json = vc.to_dict(base_url="http://localhost:8000")
-        return config_json
+    #     config_json = vc.to_dict(base_url="http://localhost:8000")
+    #     return config_json
 
+    """
+    DISABLED: used only by the /de_genes route (not in the initial release).
+    """
+    # def de_genes(self,
+    #              ind_group1:list[int],
+    #              ind_group2:list[int],
+    #              genes:list[str],
+    #              min_fraction:float,
+    #              method:str,
+    #              alpha:float)->pd.DataFrame:
+    #     """
+    #     Wrapper for the de_genes function of the SpatialQuery API
+    #     Refer to the SpatialQuery API documentation for descriptions of parameters.
 
-    def de_genes(self,
-                 ind_group1:list[int],
-                 ind_group2:list[int],
-                 genes:list[str],
-                 min_fraction:float,
-                 method:str,
-                 alpha:float)->pd.DataFrame:
-        """
-        Wrapper for the de_genes function of the SpatialQuery API
-        Refer to the SpatialQuery API documentation for descriptions of parameters.
+    #     """
+    #     df_de_genes = self.single_sp.de_genes(
+    #         ind_group1=ind_group1,
+    #         ind_group2=ind_group2,
+    #         genes=genes,
+    #         min_fraction=min_fraction,
+    #         method=method,
+    #         alpha=alpha
+    #     )
 
-        """
-        df_de_genes = self.single_sp.de_genes(
-            ind_group1=ind_group1,
-            ind_group2=ind_group2,
-            genes=genes,
-            min_fraction=min_fraction,
-            method=method,
-            alpha=alpha
-        )
-
-        return df_de_genes.to_dict(orient='records')
+    #     return df_de_genes.to_dict(orient='records')

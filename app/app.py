@@ -1,86 +1,54 @@
 import os
 import logging
-from pathlib import Path
-from flask import Flask, render_template
+from flask import Flask, jsonify
+from hubmap_commons.hm_auth import AuthHelper
 
-from models.appconfig import AppConfig
-from routes.auth.auth import login_blueprint
-from routes.globus.globus import globus_blueprint
 from routes.spatialquery.spatialquery import spatialquery_blueprint
 
-# Configure consistent logging. This is done at the beginning of each module instead of with a superclass of
-# logger to avoid the need to overload function calls to logger.
+# Specify the absolute path of the instance folder and load the config relative to it
+app = Flask(__name__,
+            instance_path=os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance'),
+            instance_relative_config=True)
+app.config.from_pyfile('app.cfg')
+
 logging.basicConfig(format='[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
                     level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
-class SpatialUI:
+# JSON error handlers
+@app.errorhandler(400)
+def http_bad_request(e):
+    return jsonify(error=str(e)), 400
 
-    def __init__(self, config: str, package_base_dir: Path):
+@app.errorhandler(401)
+def http_unauthorized(e):
+    return jsonify(error=str(e)), 401
 
-        self.app = Flask(__name__,
-                         instance_path=os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance'),
-                         instance_relative_config=True)
+@app.errorhandler(403)
+def http_forbidden(e):
+    return jsonify(error=str(e)), 403
 
-        self.app.package_base_dir = package_base_dir
+@app.errorhandler(404)
+def http_not_found(e):
+    return jsonify(error=str(e)), 404
 
-        # Set secret key for app.
-        self.config = config
-        self.app.config.from_pyfile(self.config)
-        self.app.secret_key = self.app.config['KEY']
+@app.errorhandler(500)
+def http_internal_server_error(e):
+    return jsonify(error=str(e)), 500
 
-        logger.info(f"package_base_dir: {package_base_dir}")
+# Initialize AuthHelper class and ensure singleton
+try:
+    if not AuthHelper.isInitialized():
+        auth_helper_instance = AuthHelper.create(app.config['APP_CLIENT_ID'],
+                                                 app.config['APP_CLIENT_SECRET'])
+        logger.info('Initialized auth_helper_instance successfully')
+    else:
+        auth_helper_instance = AuthHelper.instance()
+except Exception:
+    logger.exception('Failed to initialize the auth_helper_instance')
+    raise
 
-        # Register route Blueprints.
-        self.app.register_blueprint(login_blueprint)
-        self.app.register_blueprint(globus_blueprint)
-        self.app.register_blueprint(spatialquery_blueprint)
-
-        # The consortium authentication token is stored in a session cookie.
-        # Set cookie expiration:
-        # 1. Set the session lifetime to 30 minutes (in seconds).
-        self.app.config['PERMANENT_SESSION_LIFETIME'] = 300 * 60
-
-        # Custom 400 error handler.
-        @self.app.errorhandler(400)
-        def badrequest(error):
-            return render_template('400.html',error=error), 400
-
-            # Custom 400 error handler.
-
-        # Custom 401 error handler.
-        @self.app.errorhandler(401)
-        def unauthorized(error):
-            return render_template('401.html'), 401
-
-        @self.app.errorhandler(403)
-        def forbidden(error):
-            return render_template('403.html', error=error), 403
-
-        # Custom 404 error handler.
-        @self.app.errorhandler(404)
-        def notfound(error):
-            return render_template('404.html',error=error), 404
-
-        # Custom 404 error handler.
-        @self.app.errorhandler(500)
-        def servererror(error):
-            return render_template('500.html', error=error), 500
-
-# ###################################################################################################
-# For local development/testing
-# ###################################################################################################
-
-# Obtain the path to the configuration file.
-cfg = AppConfig()
-app = SpatialUI(cfg.file, Path(__file__).absolute().parent.parent.parent).app
+app.register_blueprint(spatialquery_blueprint)
 
 if __name__ == "__main__":
-    try:
-        # donor_app = SenotypeUI(cfg.file, Path(__file__).absolute().parent.parent.parent).app
-        # app = SenotypeUI(cfg.file, Path(__file__).absolute().parent.parent.parent).app
-        app.run(host='127.0.0.1', port='5000')  # flask port
-    except Exception as e:
-        print(str(e))
-        logger.error(e, exc_info=True)
-        print('Error during startup of debug server. Check the log file for further information.')
+    app.run(host='127.0.0.1', port=5000)
