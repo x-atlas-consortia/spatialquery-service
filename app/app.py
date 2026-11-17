@@ -36,6 +36,10 @@ def http_not_found(e):
 def http_internal_server_error(e):
     return jsonify(error=str(e)), 500
 
+@app.errorhandler(502)
+def http_bad_gateway(e):
+    return jsonify(error=str(e)), 502
+
 # Initialize AuthHelper class and ensure singleton
 try:
     if not AuthHelper.isInitialized():

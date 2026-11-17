@@ -33,6 +33,16 @@ import requests
 # e.g. "Slide-seq [Salmon]"). Extend this list as more spatial assays get secondary analysis files.
 SPATIAL_DATASET_TYPES = ['Slide-seq', 'Visium', 'Xenium', 'MERFISH', 'CODEX', 'PhenoCycler', 'MIBI', 'CellDIVE']
 
+REQUEST_TIMEOUT = 30
+
+
+def upstream_error_message(response):
+    try:
+        return response.json().get('error', response.text)
+    except ValueError:
+        return response.text
+
+
 class DatasetWithFiles:
 
     def __init__(self, dataset_id: str, entity_url: str, ingest_url: str, headers: dict):
@@ -71,7 +81,7 @@ class DatasetWithFiles:
         :param dataset_id: ID of a dataset
         """
         url = f'{self.entity_url}/entities/{dataset_id}'
-        response = requests.get(url=url, headers=self.headers)
+        response = requests.get(url=url, headers=self.headers, timeout=REQUEST_TIMEOUT)
 
         if response.status_code == 200:
             rjson = response.json()
@@ -89,15 +99,15 @@ class DatasetWithFiles:
         elif response.status_code == 404:
             abort(404, f'No dataset with id {dataset_id} found.')
         elif response.status_code == 400:
-            err = response.json().get('error')
+            err = upstream_error_message(response)
             if 'is not a valid id format' in err:
                 # Translate this as a 404, not a 400.
                 abort(404, f'No dataset with id {dataset_id} found.')
             else:
-                abort(response.status_code, response.json().get('error'))
+                abort(400, err)
         else:
-            abort(response.status_code, f'Error after calling /entities GET endpoint in entity-api '
-                                        f'for dataset {dataset_id}')
+            abort(502, f'Error after calling /entities GET endpoint in entity-api '
+                       f'for dataset {dataset_id} (status {response.status_code})')
 
     def _get_files(self):
         """
@@ -124,7 +134,7 @@ class DatasetWithFiles:
 
             # Get a subset of descendant information.
             url_descendants = f'{self.entity_url}/descendants-info/{self.dataset_uuid}?include=uuid,status,entity_type,dataset_type,last_modified_timestamp,files'
-            response = requests.get(url=url_descendants, headers=self.headers)
+            response = requests.get(url=url_descendants, headers=self.headers, timeout=REQUEST_TIMEOUT)
 
             if response.status_code == 200:
 
@@ -167,7 +177,8 @@ class DatasetWithFiles:
             elif response.status_code == 404:
                 abort(404, f'No file associated with dataset {self.dataset_id}.')
             else:
-                abort(response.status_code, response.json().get('error'))
+                abort(502, f'Error from entity-api descendants-info (status {response.status_code}): '
+                           f'{upstream_error_message(response)}')
 
 
     def _get_absolute_file_path(self, dataset_uuid:str):
@@ -179,7 +190,7 @@ class DatasetWithFiles:
         """
 
         url = f'{self.ingest_url}/datasets/{dataset_uuid}/file-system-abs-path'
-        response = requests.get(url=url, headers=self.headers)
+        response = requests.get(url=url, headers=self.headers, timeout=REQUEST_TIMEOUT)
 
         if response.status_code == 200:
             rjson = response.json()
@@ -188,12 +199,12 @@ class DatasetWithFiles:
         elif response.status_code == 404:
             abort(404, f'No absolute file path found for dataset {dataset_uuid}.')
         elif response.status_code == 400:
-            err = response.json().get('error')
+            err = upstream_error_message(response)
             if 'is not a valid id format' in err:
                 # Translate this as a 404, not a 400.
                 abort(404, f'No absolute file path found for dataset {dataset_uuid}.')
             else:
-                abort(response.status_code, response.json().get('error'))
+                abort(400, err)
         else:
-            abort(response.status_code, f'Error after calling /datasets/.../file-system-abs-path GET endpoint in ingest-api '
-                                        f'for dataset {dataset_uuid}')
+            abort(502, f'Error after calling /datasets/.../file-system-abs-path GET endpoint in ingest-api '
+                       f'for dataset {dataset_uuid} (status {response.status_code})')

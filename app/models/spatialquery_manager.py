@@ -99,6 +99,14 @@ class SpatialQueryManager:
         self.label_key = ''
         label_keys = ['predicted_label','CL_label']
 
+        # Fail early with a clear message if the file lacks what SpatialQuery needs.
+        if self.spatial_key not in self.adata.obsm:
+            abort(400, 'This dataset has no spatial coordinates (X_spatial), so SpatialQuery cannot analyze it.')
+        if self.feature_name not in self.adata.var.columns:
+            abort(400, f'This dataset has no {self.feature_name} gene column, so SpatialQuery cannot analyze it.')
+        if not any(k in self.adata.obs.columns for k in label_keys):
+            abort(400, f'This dataset has no cell type labels (expected one of {label_keys}).')
+
         found_for_label_key = False
         for k in label_keys:
             if not found_for_label_key:
