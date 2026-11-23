@@ -1,0 +1,1 @@
+Directory for the nginx logs of the spatialquery-service container. The compose file mounts it at /usr/src/app/log.
