@@ -90,7 +90,7 @@ Tests whether a combination of cell types occurs among the nearest neighbors of 
 | max_dist | query | number | No | 20 | |
 | return_cellID | query | boolean | No | false | Include cell IDs in the response |
 
-Response: a list of objects, one per combination tested.
+Response: a list containing one object.
 
 | Field | Type | Description |
 |---|---|---|
@@ -102,9 +102,23 @@ Response: a list of objects, one per combination tested.
 | expectation | number | Expected count by chance |
 | p-values | number | p-value of the test |
 | if_significant | boolean | True if p < 0.05 |
-| adj-pval | number | Corrected p-value. Present when multiple combinations are tested |
 | center_id | list of integers | Present when return_cellID is true |
 | neighbor_id | list of integers | Present when return_cellID is true |
+
+Example response:
+
+    [
+      {
+        "center": "podocyte",
+        "expectation": 21.252888942950978,
+        "if_significant": true,
+        "motifs": ["podocyte"],
+        "n_center": 128,
+        "n_center_motif": 122,
+        "n_motif": 1365,
+        "p-values": 1.2190698241428915e-90
+      }
+    ]
 
 ## GET /spatialquery/motif_enrichment_dist/{datasetid}
 

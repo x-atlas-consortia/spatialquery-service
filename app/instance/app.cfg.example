@@ -10,7 +10,3 @@ APP_CLIENT_SECRET=''
 # One app.cfg per deployment (HuBMAP or SenNet), so URLs are written out in full.
 ENTITY_BASE_URL='https://entity-api.dev.hubmapconsortium.org'
 INGEST_BASE_URL='https://ingest-api.dev.hubmapconsortium.org'
-
-# Optional extra headers sent on calls to entity-api and ingest-api.
-# SenNet deployments only; omit this line for HuBMAP.
-# EXTRA_API_HEADERS={'X-SenNet-Application': 'portal-ui'}

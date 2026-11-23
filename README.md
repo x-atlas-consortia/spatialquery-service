@@ -2,14 +2,7 @@
 
 Flask API that runs SpatialQuery analyses on spatially resolved HuBMAP datasets and returns JSON.
 
-Endpoints (all GET, dataset ID in the path):
-
-    /spatialquery/find_fp_knn/<datasetid>
-    /spatialquery/find_fp_dist/<datasetid>
-    /spatialquery/motif_enrichment_knn/<datasetid>
-    /spatialquery/motif_enrichment_dist/<datasetid>
-
-Send a Globus Groups token as `Authorization: Bearer <token>`. The caller must be in HuBMAP-Read.
+To call the service, see [API.md](API.md).
 
 ## Run with Docker
 

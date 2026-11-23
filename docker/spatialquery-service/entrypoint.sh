@@ -25,6 +25,7 @@ touch /var/run/nginx.pid
 chown -R hive:hive /var/run/nginx.pid
 chown -R hive:hive /var/cache/nginx
 chown -R hive:hive /var/log/nginx
+chown hive:hive /usr/src/app/log
 
 # Lastly we use su-exec to execute our process "$@" as that user
 # CMD from the Dockerfile gets passed to entrypoint.sh as command line arguments

@@ -9,6 +9,11 @@ function stage_source() {
         rm -rf spatialquery-service/app
     fi
     cp -r ../app spatialquery-service/
+
+    # Generate BUILD at the repo root, then stage VERSION and BUILD into the build context
+    (cd .. && ./generate-build-version.sh)
+    cp ../VERSION spatialquery-service/
+    cp ../BUILD spatialquery-service/
 }
 
 if [[ "$1" != "check" && "$1" != "config" && "$1" != "build" && "$1" != "start" && "$1" != "stop" && "$1" != "down" ]]; then

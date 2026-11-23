@@ -1,6 +1,7 @@
 import os
 import logging
 from flask import Flask, jsonify
+from pathlib import Path
 from hubmap_commons.hm_auth import AuthHelper
 
 from routes.spatialquery.spatialquery import spatialquery_blueprint
@@ -14,6 +15,38 @@ app.config.from_pyfile('app.cfg')
 logging.basicConfig(format='[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
                     level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger()
+
+"""
+The default route
+
+Returns
+-------
+str
+    A welcome message
+"""
+@app.route('/', methods=['GET'])
+def index():
+    return "Hello! This is HuBMAP Spatial Query Service :)"
+
+@app.route('/status', methods=['GET'])
+def get_status():
+
+    try:
+        file_version_content = (Path(__file__).absolute().parent.parent / 'VERSION').read_text().strip()
+    except Exception as e:
+        file_version_content = str(e)
+
+    try:
+        file_build_content = (Path(__file__).absolute().parent.parent / 'BUILD').read_text().strip()
+    except Exception as e:
+        file_build_content = str(e)
+
+    status_data = {
+        'version': file_version_content,
+        'build': file_build_content
+    }
+
+    return jsonify(status_data)
 
 # JSON error handlers
 @app.errorhandler(400)

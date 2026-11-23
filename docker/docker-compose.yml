@@ -5,6 +5,12 @@ services:
     container_name: spatialquery-service
     ports:
       - "3334:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     build:
       # Build context holds the Dockerfile, nginx files and the staged copy of app/
       # (copied in by docker-development.sh before building)

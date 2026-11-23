@@ -20,7 +20,6 @@ def build_dataset_with_files(datasetid):
     headers = {'Accept': 'application/json',
                'Content-Type': 'application/json',
                'Authorization': request.headers['Authorization']}
-    headers.update(current_app.config.get('EXTRA_API_HEADERS', {}))
     dataset_with_files = DatasetWithFiles(dataset_id=datasetid,
                                           entity_url=current_app.config['ENTITY_BASE_URL'],
                                           ingest_url=current_app.config['INGEST_BASE_URL'],

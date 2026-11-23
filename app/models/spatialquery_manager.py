@@ -69,7 +69,8 @@ class SpatialQueryManager:
         adata_path = f'{absolute_file_path}/secondary_analysis.h5ad'
 
         if not os.path.exists(adata_path):
-            abort(404,f'The secondary_analysis.h5ad file was not found in path {adata_path} in the file system.')
+            logger.error(f'secondary_analysis.h5ad not found at {adata_path}')
+            abort(404, 'The secondary_analysis.h5ad file was not found for this dataset.')
         self.adata = ad.read_h5ad(adata_path)
 
         """
@@ -142,7 +143,8 @@ class SpatialQueryManager:
                     continue
 
         if not found_for_label_key:
-            abort(404,f'No labels corresponding to {label_keys} in {adata_path}.')
+            logger.error(f'No usable labels {label_keys} in {adata_path}')
+            abort(404, f'No usable cell type labels found in this dataset (expected one of {label_keys}).')
 
 
     def find_fp_knn(self, ct: str, k: int, min_support:float, max_dist:float)->pd.DataFrame:
