@@ -4,14 +4,28 @@ spatialquery.py
 Obtains inputs to be used to configure a SpatialQuery Vitessce configuration.
 
 """
-from flask import Blueprint, make_response, jsonify, session, request,abort
-import numpy as np
-import scanpy as sc
+import logging
+from flask import Blueprint, make_response, jsonify, session, request, abort, current_app
+# import numpy as np
+# import scanpy as sc
+from hubmap_commons.hm_auth import secured
 
 from models.datasetwithfiles import DatasetWithFiles
 from models.spatialquery_manager import SpatialQueryManager
 
 spatialquery_blueprint = Blueprint('spatialquery', __name__, url_prefix='/spatialquery')
+logger = logging.getLogger(__name__)
+
+def build_dataset_with_files(datasetid):
+    headers = {'Accept': 'application/json',
+               'Content-Type': 'application/json',
+               'Authorization': request.headers['Authorization']}
+    dataset_with_files = DatasetWithFiles(dataset_id=datasetid,
+                                          entity_url=current_app.config['ENTITY_BASE_URL'],
+                                          ingest_url=current_app.config['INGEST_BASE_URL'],
+                                          headers=headers)
+    logger.info(f'Dataset {datasetid} resolved to file dataset {dataset_with_files.file_uuid} at {dataset_with_files.absolute_file_path}')
+    return dataset_with_files
 
 """
 ROUTES TO BE IMPLEMENTED IN THE INITIAL RELEASE:
@@ -21,6 +35,7 @@ ROUTES TO BE IMPLEMENTED IN THE INITIAL RELEASE:
 /motif_enrichment_dist
 """
 @spatialquery_blueprint.route('/find_fp_knn/<datasetid>', methods=['GET'])
+@secured(has_read=True)
 def get_spatialquery_find_fp_knn(datasetid):
 
     """
@@ -45,8 +60,8 @@ def get_spatialquery_find_fp_knn(datasetid):
            has secondary analysis files
         3. absolute file path to the secondary analysis files
         """
-    print(f'Getting file information for dataset {datasetid}')
-    dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
+    logger.info(f'Getting file information for dataset {datasetid}')
+    dataset_with_files = build_dataset_with_files(datasetid)
 
     """
     Initialize SpatialQuery using the secondary analysis files.
@@ -64,24 +79,34 @@ def get_spatialquery_find_fp_knn(datasetid):
     if k is None:
         k = 30
     else:
-        k = int(k)
+        try:
+            k = int(k)
+        except ValueError:
+            abort(400, 'Query parameter k must be an integer.')
 
     min_support = request.args.get('min_support')
     if min_support is None:
         min_support = 0.7
     else:
-        min_support = float(min_support)
+        try:
+            min_support = float(min_support)
+        except ValueError:
+            abort(400, 'Query parameter min_support must be a number.')
 
     max_dist = request.args.get('max_dist')
     if max_dist is None:
         max_dist = 20
     else:
-        max_dist = float(max_dist)
+        try:
+            max_dist = float(max_dist)
+        except ValueError:
+            abort(400, 'Query parameter max_dist must be a number.')
 
     dict_response = spv.find_fp_knn(ct=ct, k=k, min_support=min_support, max_dist=max_dist)
     return make_response(jsonify(dict_response), 200)
 
 @spatialquery_blueprint.route('/find_fp_dist/<datasetid>', methods=['GET'])
+@secured(has_read=True)
 def get_spatialquery_find_fp_dist(datasetid):
     """
     Prepares and executes a call to the find_kp_dist function of
@@ -105,8 +130,8 @@ def get_spatialquery_find_fp_dist(datasetid):
            has secondary analysis files
         3. absolute file path to the secondary analysis files
         """
-    print(f'Getting file information for dataset {datasetid}')
-    dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
+    logger.info(f'Getting file information for dataset {datasetid}')
+    dataset_with_files = build_dataset_with_files(datasetid)
 
     """
     Initialize SpatialQuery using the secondary analysis files.
@@ -125,24 +150,34 @@ def get_spatialquery_find_fp_dist(datasetid):
     if min_support is None:
         min_support = 0.7
     else:
-        min_support = float(min_support)
+        try:
+            min_support = float(min_support)
+        except ValueError:
+            abort(400, 'Query parameter min_support must be a number.')
 
     max_dist = request.args.get('max_dist')
     if max_dist is None:
         max_dist = 20
     else:
-        max_dist = float(max_dist)
+        try:
+            max_dist = float(max_dist)
+        except ValueError:
+            abort(400, 'Query parameter max_dist must be a number.')
 
-    min_size = request.args.get('max_size')
+    min_size = request.args.get('min_size')
     if min_size is None:
         min_size = 0
     else:
-        min_size = float(min_size)
+        try:
+            min_size = float(min_size)
+        except ValueError:
+            abort(400, 'Query parameter min_size must be a number.')
 
     dict_response = spv.find_fp_dist(ct=ct, max_dist=max_dist, min_size=min_size, min_support=min_support)
     return make_response(jsonify(dict_response), 200)
 
 @spatialquery_blueprint.route('/motif_enrichment_knn/<datasetid>', methods=['GET'])
+@secured(has_read=True)
 def get_spatialquerymotif_enrichment_knn(datasetid):
     """
     Prepares and executes a call to the motif_enrichment_knn function of
@@ -166,8 +201,8 @@ def get_spatialquerymotif_enrichment_knn(datasetid):
            has secondary analysis files
         3. absolute file path to the secondary analysis files
         """
-    print(f'Getting file information for dataset {datasetid}')
-    dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
+    logger.info(f'Getting file information for dataset {datasetid}')
+    dataset_with_files = build_dataset_with_files(datasetid)
 
     """
     Initialize SpatialQuery using the secondary analysis files.
@@ -185,10 +220,13 @@ def get_spatialquerymotif_enrichment_knn(datasetid):
     if k is None:
         k = 30
     else:
-        k = int(k)
+        try:
+            k = int(k)
+        except ValueError:
+            abort(400, 'Query parameter k must be an integer.')
 
     motifs = request.args.get('motifs')
-    if motifs == "None":
+    if motifs is None or motifs == "None":
         motifs = [ct]
     else:
         motifs = motifs.split(',')
@@ -197,13 +235,19 @@ def get_spatialquerymotif_enrichment_knn(datasetid):
     if min_support is None:
         min_support = 0.7
     else:
-        min_support = float(min_support)
+        try:
+            min_support = float(min_support)
+        except ValueError:
+            abort(400, 'Query parameter min_support must be a number.')
 
     max_dist = request.args.get('max_dist')
     if max_dist is None:
         max_dist = 20
     else:
-        max_dist = float(max_dist)
+        try:
+            max_dist = float(max_dist)
+        except ValueError:
+            abort(400, 'Query parameter max_dist must be a number.')
 
     return_cellID = request.args.get('return_cellID')
     if return_cellID is None:
@@ -215,6 +259,7 @@ def get_spatialquerymotif_enrichment_knn(datasetid):
     return make_response(jsonify(dict_response), 200)
 
 @spatialquery_blueprint.route('/motif_enrichment_dist/<datasetid>', methods=['GET'])
+@secured(has_read=True)
 def get_spatialquerymotif_enrichment_dist(datasetid):
     """
     Prepares and executes a call to the motif_enrichment_dist function of
@@ -238,8 +283,8 @@ def get_spatialquerymotif_enrichment_dist(datasetid):
            has secondary analysis files
         3. absolute file path to the secondary analysis files
         """
-    print(f'Getting file information for dataset {datasetid}')
-    dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
+    logger.info(f'Getting file information for dataset {datasetid}')
+    dataset_with_files = build_dataset_with_files(datasetid)
 
     """
     Initialize SpatialQuery using the secondary analysis files.
@@ -255,7 +300,7 @@ def get_spatialquerymotif_enrichment_dist(datasetid):
         ct = "podocyte"
 
     motifs = request.args.get('motifs')
-    if motifs == "None":
+    if motifs is None or motifs == "None":
         motifs = [ct]
     else:
         motifs = motifs.split(',')
@@ -264,19 +309,28 @@ def get_spatialquerymotif_enrichment_dist(datasetid):
     if min_support is None:
         min_support = 0.7
     else:
-        min_support = float(min_support)
+        try:
+            min_support = float(min_support)
+        except ValueError:
+            abort(400, 'Query parameter min_support must be a number.')
 
     max_dist = request.args.get('max_dist')
     if max_dist is None:
         max_dist = 20
     else:
-        max_dist = float(max_dist)
+        try:
+            max_dist = float(max_dist)
+        except ValueError:
+            abort(400, 'Query parameter max_dist must be a number.')
 
     min_size = request.args.get('min_size')
     if min_size is None:
         min_size = 0
     else:
-        min_size = float(min_size)
+        try:
+            min_size = float(min_size)
+        except ValueError:
+            abort(400, 'Query parameter min_size must be a number.')
 
     return_cellID = request.args.get('return_cellID')
     if return_cellID is None:
@@ -295,369 +349,374 @@ PROTOTYPE ROUTES THAT WILL NOT BE IMPLEMENTED IN THE INITIAL RELEASE:
 /de_genes
 /compute_gene_gene_correlation
 """
-@spatialquery_blueprint.route('/find_patterns_grid/<datasetid>', methods=['GET'])
-def get_spatialquery_patterns_grid(datasetid):
+# @spatialquery_blueprint.route('/find_patterns_grid/<datasetid>', methods=['GET'])
+# def get_spatialquery_patterns_grid(datasetid):
 
-    """
-        Obtain for the specified dataset id:
-        1. uuid
-        2. uuid for the dataset in the dataset's provenance chain that
-           has secondary analysis files
-        3. absolute file path to the secondary analysis files
-        """
-    print(f'Getting file information for dataset {datasetid}')
-    dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
+#     """
+#         Obtain for the specified dataset id:
+#         1. uuid
+#         2. uuid for the dataset in the dataset's provenance chain that
+#            has secondary analysis files
+#         3. absolute file path to the secondary analysis files
+#         """
+#     logger.info(f'Getting file information for dataset {datasetid}')
 
-    """
-    Initialize SpatialQuery using the secondary analysis files.
-    """
-    spv = SpatialQueryManager(absolute_file_path=dataset_with_files.absolute_file_path)
+#     dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
 
-
-    min_support = request.args.get('min_support')
-    if min_support is None:
-        min_support = 0.7
-    else:
-        min_support = float(min_support)
-
-    max_dist = request.args.get('max_dist')
-    if max_dist is None:
-        max_dist = 20
-    else:
-        max_dist = float(max_dist)
-
-    min_size = request.args.get('max_size')
-    if min_size is None:
-        min_size = 0
-    else:
-        min_size = float(min_size)
-
-    if_display = request.args.get('if_display')
-    if if_display is None:
-        if_display = True
-    else:
-        if_display = if_display.upper()=="TRUE"
-
-    figsize_width = request.args.get('figsize_width')
-    if figsize_width is None:
-        figsize_width=10
-    else:
-        figsize_width = int(figsize_width)
-    figsize_height = request.args.get('figsize_height')
-    if figsize_height is None:
-        figsize_height = 5
-    else:
-        figsize_height = int(figsize_height)
-
-    return_cellID = request.args.get('return_cellID')
-    if return_cellID is None:
-        return_cellID = False
-    else:
-        return_cellID = return_cellID.upper() == "TRUE"
-
-    return_grid=request.args.get('return_grid')
-    if return_grid is None:
-        return_grid = False
-    else:
-        return_grid = return_grid.upper() == "TRUE"
-
-    dict_response = spv.find_patterns_grid(max_dist=max_dist,
-                                           min_size=min_size,
-                                           min_support=min_support,
-                                           if_display=if_display,
-                                           figsize=(figsize_width, figsize_height),
-                                           return_cellID=return_cellID,
-                                           return_grid=return_grid)
-    return make_response(jsonify(dict_response), 200)
-
-@spatialquery_blueprint.route('/find_patterns_rand/<datasetid>', methods=['GET'])
-def get_spatialquery_patterns_rand(datasetid):
-
-    """
-        Obtain for the specified dataset id:
-        1. uuid
-        2. uuid for the dataset in the dataset's provenance chain that
-           has secondary analysis files
-        3. absolute file path to the secondary analysis files
-        """
-    print(f'Getting file information for dataset {datasetid}')
-    dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
-
-    """
-    Initialize SpatialQuery using the secondary analysis files.
-    """
-    spv = SpatialQueryManager(absolute_file_path=dataset_with_files.absolute_file_path)
+#     """
+#     Initialize SpatialQuery using the secondary analysis files.
+#     """
+#     spv = SpatialQueryManager(absolute_file_path=dataset_with_files.absolute_file_path)
 
 
-    min_support = request.args.get('min_support')
-    if min_support is None:
-        min_support = 0.7
-    else:
-        min_support = float(min_support)
+#     min_support = request.args.get('min_support')
+#     if min_support is None:
+#         min_support = 0.7
+#     else:
+#         min_support = float(min_support)
 
-    max_dist = request.args.get('max_dist')
-    if max_dist is None:
-        max_dist = 20
-    else:
-        max_dist = float(max_dist)
+#     max_dist = request.args.get('max_dist')
+#     if max_dist is None:
+#         max_dist = 20
+#     else:
+#         max_dist = float(max_dist)
 
-    n_points = request.args.get('n_points')
-    if n_points is None:
-        n_points = 1000
-    else:
-        n_points = int(n_points)
+#     min_size = request.args.get('max_size')
+#     if min_size is None:
+#         min_size = 0
+#     else:
+#         min_size = float(min_size)
 
-    min_size = request.args.get('max_size')
-    if min_size is None:
-        min_size = 0
-    else:
-        min_size = float(min_size)
+#     if_display = request.args.get('if_display')
+#     if if_display is None:
+#         if_display = True
+#     else:
+#         if_display = if_display.upper()=="TRUE"
 
-    if_display = request.args.get('if_display')
-    if if_display is None:
-        if_display = True
-    else:
-        if_display = if_display.upper()=="TRUE"
+#     figsize_width = request.args.get('figsize_width')
+#     if figsize_width is None:
+#         figsize_width=10
+#     else:
+#         figsize_width = int(figsize_width)
+#     figsize_height = request.args.get('figsize_height')
+#     if figsize_height is None:
+#         figsize_height = 5
+#     else:
+#         figsize_height = int(figsize_height)
 
-    figsize_width = request.args.get('figsize_width')
-    if figsize_width is None:
-        figsize_width=10
-    else:
-        figsize_width = int(figsize_width)
-    figsize_height = request.args.get('figsize_height')
-    if figsize_height is None:
-        figsize_height = 5
-    else:
-        figsize_height = int(figsize_height)
+#     return_cellID = request.args.get('return_cellID')
+#     if return_cellID is None:
+#         return_cellID = False
+#     else:
+#         return_cellID = return_cellID.upper() == "TRUE"
 
-    return_cellID = request.args.get('return_cellID')
-    if return_cellID is None:
-        return_cellID = False
-    else:
-        return_cellID = return_cellID.upper() == "TRUE"
+#     return_grid=request.args.get('return_grid')
+#     if return_grid is None:
+#         return_grid = False
+#     else:
+#         return_grid = return_grid.upper() == "TRUE"
 
-    return_grid=request.args.get('return_grid')
-    if return_grid is None:
-        return_grid = False
-    else:
-        return_grid = return_grid.upper() == "TRUE"
+#     dict_response = spv.find_patterns_grid(max_dist=max_dist,
+#                                            min_size=min_size,
+#                                            min_support=min_support,
+#                                            if_display=if_display,
+#                                            figsize=(figsize_width, figsize_height),
+#                                            return_cellID=return_cellID,
+#                                            return_grid=return_grid)
+#     return make_response(jsonify(dict_response), 200)
 
-    seed = request.args.get('seed')
-    if seed is None:
-        seed = 2023
-    else:
-        seed = int(seed)
+# @spatialquery_blueprint.route('/find_patterns_rand/<datasetid>', methods=['GET'])
+# def get_spatialquery_patterns_rand(datasetid):
 
-    dict_response = spv.find_patterns_rand(max_dist=max_dist,
-                                           n_points=n_points,
-                                           min_support=min_support,
-                                           min_size=min_size,
-                                           if_display=if_display,
-                                           figsize=(figsize_width, figsize_height),
-                                           return_cellID=return_cellID,
-                                           seed=seed)
-    return make_response(jsonify(dict_response), 200)
-@spatialquery_blueprint.route('/vitessce-config/<datasetid>', methods=['GET'])
-def get_spatialqueryvitessce_config(datasetid):
+#     """
+#         Obtain for the specified dataset id:
+#         1. uuid
+#         2. uuid for the dataset in the dataset's provenance chain that
+#            has secondary analysis files
+#         3. absolute file path to the secondary analysis files
+#         """
+#     logger.info(f'Getting file information for dataset {datasetid}')
 
-    """
-    Obtain for the specified dataset id:
-    1. uuid
-    2. uuid for the dataset in the dataset's provenance chain that
-       has secondary analysis files
-    3. absolute file path to the secondary analysis files
-    """
-    print(f'Getting file information for dataset {datasetid}')
-    dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
+#     dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
 
-    """
-    Initialize SpatialQuery using the secondary analysis files.
-    """
-    spv = SpatialQueryManager(absolute_file_path=dataset_with_files.absolute_file_path)
-    vcwidget = spv.get_vitessce_widget()
-
-    dict_response = {
-        "dataset_info":{
-            "id": datasetid,
-            "uuid": dataset_with_files.dataset_uuid
-        },
-        "file_info":{
-            "file_dataset_uuid":dataset_with_files.file_uuid,
-            #"files":dataset_with_files.files,
-            "absolute_file_path":dataset_with_files.absolute_file_path
-        },
-        "config":vcwidget
-    }
-
-    return make_response(jsonify(dict_response), 200)
-
-@spatialquery_blueprint.route('/de_genes/<datasetid>', methods=['GET'])
-def get_spatialquery_de_genes(datasetid):
-    """
-    Differential gene analysis.
-
-    The SpatialQueryManager object's wrapper functions (e.g., find_kp_knn)
-    call corresponding functions of the SpatialQuery object.
-    The SpatialQuery object returns dataframes; the SpatialQueryManager object
-    converts these dataframes into dicts for reponsse.
-
-    Differential analysis is a multi-step workflow that
-    makes a number of calls to the SpatialQuery API and works with the
-    Pandas DataFrame responses as intermediate data structures. To replicate this workflow, call the SpatialQuery API
-    directly.
-    """
-
-    """
-        Obtain for the specified dataset id:
-        1. uuid
-        2. uuid for the dataset in the dataset's provenance chain that
-           has secondary analysis files
-        3. absolute file path to the secondary analysis files
-        """
-
-    print(f'Getting file information for dataset {datasetid}')
-    dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
-
-    """
-    Initialize SpatialQuery using the secondary analysis files.
-    """
-    print('initializing SpatialQuery object')
-    spv = SpatialQueryManager(absolute_file_path=dataset_with_files.absolute_file_path)
+#     """
+#     Initialize SpatialQuery using the secondary analysis files.
+#     """
+#     spv = SpatialQueryManager(absolute_file_path=dataset_with_files.absolute_file_path)
 
 
+#     min_support = request.args.get('min_support')
+#     if min_support is None:
+#         min_support = 0.7
+#     else:
+#         min_support = float(min_support)
 
-    ct = request.args.get('ct')
-    if ct is None:
-        ct = "podocyte"
+#     max_dist = request.args.get('max_dist')
+#     if max_dist is None:
+#         max_dist = 20
+#     else:
+#         max_dist = float(max_dist)
 
-    """
-    Identify frequent patterns.
-    """
+#     n_points = request.args.get('n_points')
+#     if n_points is None:
+#         n_points = 1000
+#     else:
+#         n_points = int(n_points)
 
-    print(f'Calling find_fp_knn for {ct}')
-    # Note: spv.single_sp.find_fp_knn instead of spv.find_fp_knn.
-    fp_knn = spv.single_sp.find_fp_knn(
-        ct=ct,
-        k=30,
-        min_support=0.5#,
-       # max_dist=20
-    )
+#     min_size = request.args.get('max_size')
+#     if min_size is None:
+#         min_size = 0
+#     else:
+#         min_size = float(min_size)
 
-    """
-    Specify a motif from the frequent pattern results
-    """
+#     if_display = request.args.get('if_display')
+#     if if_display is None:
+#         if_display = True
+#     else:
+#         if_display = if_display.upper()=="TRUE"
 
-    # Specify a motif from the frequent pattern results.
-    motif = list(fp_knn['itemsets'][0])
-    # Note: spv.single_sp.motif_enrichment_knn instead of spv.motif_enrichment_knn.
-    motif_sig_custom = spv.single_sp.motif_enrichment_knn(
-        ct=ct,
-        motifs=motif,
-        k=30,
-    )
+#     figsize_width = request.args.get('figsize_width')
+#     if figsize_width is None:
+#         figsize_width=10
+#     else:
+#         figsize_width = int(figsize_width)
+#     figsize_height = request.args.get('figsize_height')
+#     if figsize_height is None:
+#         figsize_height = 5
+#     else:
+#         figsize_height = int(figsize_height)
 
-    # Enrich on the specified motif.
-    motif = motif_sig_custom['motifs'][0]
-    # Note: spv.single_sp.motif_enrichment_dist instead of spv.motif_enrichment_dist.
-    motif_result_dist = spv.single_sp.motif_enrichment_dist(
-        ct=ct,
-        motifs=motif,
-        max_dist=10,
-        return_cellID=True
-    )
+#     return_cellID = request.args.get('return_cellID')
+#     if return_cellID is None:
+#         return_cellID = False
+#     else:
+#         return_cellID = return_cellID.upper() == "TRUE"
 
-    center_id = motif_result_dist["center_id"].iloc[0]
-    all_center_id = np.where(spv.single_sp.labels == ct)[0]
-    non_center_id = np.setdiff1d(all_center_id, center_id)
+#     return_grid=request.args.get('return_grid')
+#     if return_grid is None:
+#         return_grid = False
+#     else:
+#         return_grid = return_grid.upper() == "TRUE"
 
-    print(f"Motif+ anchor cells: {len(center_id)}")
-    print(f"Motif− anchor cells: {len(non_center_id)}")
+#     seed = request.args.get('seed')
+#     if seed is None:
+#         seed = 2023
+#     else:
+#         seed = int(seed)
 
-    print('Calling de_genes')
-    # Note: spv.single_sp.de_genes instead of spv.de_genes.
-    de_result = spv.single_sp.de_genes(
-        ind_group1=center_id,
-        ind_group2=non_center_id,
-        min_fraction=0.05,
-        method="t-test",
-        alpha=0.05,
-    )
+#     dict_response = spv.find_patterns_rand(max_dist=max_dist,
+#                                            n_points=n_points,
+#                                            min_support=min_support,
+#                                            min_size=min_size,
+#                                            if_display=if_display,
+#                                            figsize=(figsize_width, figsize_height),
+#                                            return_cellID=return_cellID,
+#                                            seed=seed)
+#     return make_response(jsonify(dict_response), 200)
+# @spatialquery_blueprint.route('/vitessce-config/<datasetid>', methods=['GET'])
+# def get_spatialqueryvitessce_config(datasetid):
 
-    print(f"Number of DE genes: {len(de_result)}")
-    dict_response = de_result.to_dict()
+#     """
+#     Obtain for the specified dataset id:
+#     1. uuid
+#     2. uuid for the dataset in the dataset's provenance chain that
+#        has secondary analysis files
+#     3. absolute file path to the secondary analysis files
+#     """
+#     logger.info(f'Getting file information for dataset {datasetid}')
 
-    return make_response(jsonify(dict_response), 200)
+#     dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
 
-@spatialquery_blueprint.route('/compute_gene_gene_correlation/<datasetid>', methods=['GET'])
-def get_spatialquery_compute_gene_gene_correlation(datasetid):
-    """
-        Gene-gene correlation analysis.
+#     """
+#     Initialize SpatialQuery using the secondary analysis files.
+#     """
+#     spv = SpatialQueryManager(absolute_file_path=dataset_with_files.absolute_file_path)
+#     vcwidget = spv.get_vitessce_widget()
 
-        The SpatialQueryManager object's wrapper functions (e.g., find_kp_knn)
-        call corresponding functions of the SpatialQuery object.
-        The SpatialQuery object returns dataframes; the SpatialQueryManager object
-        converts these dataframes into dicts for reponsse.
+#     dict_response = {
+#         "dataset_info":{
+#             "id": datasetid,
+#             "uuid": dataset_with_files.dataset_uuid
+#         },
+#         "file_info":{
+#             "file_dataset_uuid":dataset_with_files.file_uuid,
+#             #"files":dataset_with_files.files,
+#             "absolute_file_path":dataset_with_files.absolute_file_path
+#         },
+#         "config":vcwidget
+#     }
 
-        Gene-gene correlations analysis is a multi-step workflow that
-        makes a number of calls to the SpatialQuery API and works with the
-        Pandas DataFrame responses as intermediate data structures. To replicate this workflow, call the SpatialQuery API
-        directly.
-    """
+#     return make_response(jsonify(dict_response), 200)
 
-    """
-        Obtain for the specified dataset id:
-        1. uuid
-        2. uuid for the dataset in the dataset's provenance chain that
-           has secondary analysis files
-        3. absolute file path to the secondary analysis files
-        """
+# @spatialquery_blueprint.route('/de_genes/<datasetid>', methods=['GET'])
+# def get_spatialquery_de_genes(datasetid):
+#     """
+#     Differential gene analysis.
 
-    print(f'Getting file information for dataset {datasetid}')
-    dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
+#     The SpatialQueryManager object's wrapper functions (e.g., find_kp_knn)
+#     call corresponding functions of the SpatialQuery object.
+#     The SpatialQuery object returns dataframes; the SpatialQueryManager object
+#     converts these dataframes into dicts for reponsse.
 
-    """
-    Initialize SpatialQuery using the secondary analysis files.
-    """
-    print('Initializing SpatialQuery object')
-    spv = SpatialQueryManager(absolute_file_path=dataset_with_files.absolute_file_path)
+#     Differential analysis is a multi-step workflow that
+#     makes a number of calls to the SpatialQuery API and works with the
+#     Pandas DataFrame responses as intermediate data structures. To replicate this workflow, call the SpatialQuery API
+#     directly.
+#     """
 
-    print('Obtaining highly-variable gene list')
-    """
-    This is taken from the example notebook. 
-    Consult the SpatialQuery development team if there are questions.
-    """
-    adata_tmp = spv.single_sp.adata.copy()
-    sc.pp.highly_variable_genes(adata_tmp, n_top_genes=3000)
-    hvg = adata_tmp.var[adata_tmp.var['highly_variable']].index.tolist()
+#     """
+#         Obtain for the specified dataset id:
+#         1. uuid
+#         2. uuid for the dataset in the dataset's provenance chain that
+#            has secondary analysis files
+#         3. absolute file path to the secondary analysis files
+#         """
 
-    ct = request.args.get('ct')
-    if ct is None:
-        ct = "podocyte"
+#     logger.info(f'Getting file information for dataset {datasetid}')
 
-    """
-    Identify frequent patterns.
-    """
-    print(f'Calling find_fp_knn for {ct}')
-    # Note: spv.single_sp.find_fp_knn instead of spv.find_kp_knn.
-    fp_knn = spv.single_sp.find_fp_knn(
-        ct=ct,
-        k=30,
-        min_support=0.5  # ,
-        # max_dist=20
-    )
+#     dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
 
-    motif = list(fp_knn['itemsets'][0])
-    print('Calling compute_gene_gene_correlation_by_type')
-    # Note: spv.single_sp.compute_gene_gene_correlation_by_type instead of spv.compute_gene_gene_correlation_by_type.
-    gene_pair_df = spv.single_sp.compute_gene_gene_correlation_by_type(
-        ct=ct,
-        motif=motif,
-        genes=hvg,  # specify genes to compute gene-gene correlation, or use all genes by setting genes=None
-        max_dist=10,  # define neighborhood size with radius-based neighborhood, or specify k for knn-based neighborhood
-    )
+#     """
+#     Initialize SpatialQuery using the secondary analysis files.
+#     """
+#     print('initializing SpatialQuery object')
+#     spv = SpatialQueryManager(absolute_file_path=dataset_with_files.absolute_file_path)
 
-    gene_pair_df = gene_pair_df[gene_pair_df['if_significant']]
 
-    dict_response = gene_pair_df.to_dict()
 
-    return make_response(jsonify(dict_response), 200)
+#     ct = request.args.get('ct')
+#     if ct is None:
+#         ct = "podocyte"
+
+#     """
+#     Identify frequent patterns.
+#     """
+
+#     print(f'Calling find_fp_knn for {ct}')
+#     # Note: spv.single_sp.find_fp_knn instead of spv.find_fp_knn.
+#     fp_knn = spv.single_sp.find_fp_knn(
+#         ct=ct,
+#         k=30,
+#         min_support=0.5#,
+#        # max_dist=20
+#     )
+
+#     """
+#     Specify a motif from the frequent pattern results
+#     """
+
+#     # Specify a motif from the frequent pattern results.
+#     motif = list(fp_knn['itemsets'][0])
+#     # Note: spv.single_sp.motif_enrichment_knn instead of spv.motif_enrichment_knn.
+#     motif_sig_custom = spv.single_sp.motif_enrichment_knn(
+#         ct=ct,
+#         motifs=motif,
+#         k=30,
+#     )
+
+#     # Enrich on the specified motif.
+#     motif = motif_sig_custom['motifs'][0]
+#     # Note: spv.single_sp.motif_enrichment_dist instead of spv.motif_enrichment_dist.
+#     motif_result_dist = spv.single_sp.motif_enrichment_dist(
+#         ct=ct,
+#         motifs=motif,
+#         max_dist=10,
+#         return_cellID=True
+#     )
+
+#     center_id = motif_result_dist["center_id"].iloc[0]
+#     all_center_id = np.where(spv.single_sp.labels == ct)[0]
+#     non_center_id = np.setdiff1d(all_center_id, center_id)
+
+#     print(f"Motif+ anchor cells: {len(center_id)}")
+#     print(f"Motif− anchor cells: {len(non_center_id)}")
+
+#     print('Calling de_genes')
+#     # Note: spv.single_sp.de_genes instead of spv.de_genes.
+#     de_result = spv.single_sp.de_genes(
+#         ind_group1=center_id,
+#         ind_group2=non_center_id,
+#         min_fraction=0.05,
+#         method="t-test",
+#         alpha=0.05,
+#     )
+
+#     print(f"Number of DE genes: {len(de_result)}")
+#     dict_response = de_result.to_dict()
+
+#     return make_response(jsonify(dict_response), 200)
+
+# @spatialquery_blueprint.route('/compute_gene_gene_correlation/<datasetid>', methods=['GET'])
+# def get_spatialquery_compute_gene_gene_correlation(datasetid):
+#     """
+#         Gene-gene correlation analysis.
+
+#         The SpatialQueryManager object's wrapper functions (e.g., find_kp_knn)
+#         call corresponding functions of the SpatialQuery object.
+#         The SpatialQuery object returns dataframes; the SpatialQueryManager object
+#         converts these dataframes into dicts for reponsse.
+
+#         Gene-gene correlations analysis is a multi-step workflow that
+#         makes a number of calls to the SpatialQuery API and works with the
+#         Pandas DataFrame responses as intermediate data structures. To replicate this workflow, call the SpatialQuery API
+#         directly.
+#     """
+
+#     """
+#         Obtain for the specified dataset id:
+#         1. uuid
+#         2. uuid for the dataset in the dataset's provenance chain that
+#            has secondary analysis files
+#         3. absolute file path to the secondary analysis files
+#         """
+
+#     logger.info(f'Getting file information for dataset {datasetid}')
+
+#     dataset_with_files = DatasetWithFiles(dataset_id=datasetid)
+
+#     """
+#     Initialize SpatialQuery using the secondary analysis files.
+#     """
+#     print('Initializing SpatialQuery object')
+#     spv = SpatialQueryManager(absolute_file_path=dataset_with_files.absolute_file_path)
+
+#     print('Obtaining highly-variable gene list')
+#     """
+#     This is taken from the example notebook. 
+#     Consult the SpatialQuery development team if there are questions.
+#     """
+#     adata_tmp = spv.single_sp.adata.copy()
+#     sc.pp.highly_variable_genes(adata_tmp, n_top_genes=3000)
+#     hvg = adata_tmp.var[adata_tmp.var['highly_variable']].index.tolist()
+
+#     ct = request.args.get('ct')
+#     if ct is None:
+#         ct = "podocyte"
+
+#     """
+#     Identify frequent patterns.
+#     """
+#     print(f'Calling find_fp_knn for {ct}')
+#     # Note: spv.single_sp.find_fp_knn instead of spv.find_kp_knn.
+#     fp_knn = spv.single_sp.find_fp_knn(
+#         ct=ct,
+#         k=30,
+#         min_support=0.5  # ,
+#         # max_dist=20
+#     )
+
+#     motif = list(fp_knn['itemsets'][0])
+#     print('Calling compute_gene_gene_correlation_by_type')
+#     # Note: spv.single_sp.compute_gene_gene_correlation_by_type instead of spv.compute_gene_gene_correlation_by_type.
+#     gene_pair_df = spv.single_sp.compute_gene_gene_correlation_by_type(
+#         ct=ct,
+#         motif=motif,
+#         genes=hvg,  # specify genes to compute gene-gene correlation, or use all genes by setting genes=None
+#         max_dist=10,  # define neighborhood size with radius-based neighborhood, or specify k for knn-based neighborhood
+#     )
+
+#     gene_pair_df = gene_pair_df[gene_pair_df['if_significant']]
+
+#     dict_response = gene_pair_df.to_dict()
+
+#     return make_response(jsonify(dict_response), 200)
